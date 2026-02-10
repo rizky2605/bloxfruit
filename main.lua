@@ -1,10 +1,10 @@
 --[[
-    VELOX V122 (HYBRID PC/MOBILE ULTIMATE)
-    - Aim Fix: Joystick movement pauses for 0.03s on trigger to force aim to screen tap.
-    - Feature: Weapon-Specific Virtual Keys (Auto-Equip).
-    - Feature: Control Tab with PC Keybinding system.
-    - Feature: "Hide Buttons" for cleaner screen (Functions remain active).
-    - UI: Renamed to VELOX, Layout optimized.
+    VELOX V123 (ULTIMATE HYBRID)
+    - Fix: Joystick input paused briefly (0.03s) on fire, then resumes seamlessly (maintaining thumb position).
+    - Feature: Weapon-Specific Virtual Keys (Auto-Equip + Fire).
+    - Feature: Control Tab with PC Keybinding.
+    - Feature: "Hide Buttons" mode.
+    - UI: Renamed to VELOX, Layout Cleaned.
 ]]
 
 -- === SERVICES ===
@@ -43,17 +43,17 @@ local IsLayoutLocked = false
 local GlobalTransparency = 0 
 local AreButtonsHidden = false
 local IsJoystickEnabled = false 
-local IsMovementPaused = false -- New Flag for Aim Fix
+local IsMovementPaused = false 
 
 local Combos = {} 
 local CurrentComboIndex = 0 
-local ActiveVirtualKeys = {} -- Stores button objects and data
+local ActiveVirtualKeys = {} 
 local CurrentConfigName = nil 
-local Keybinds = {} -- Stores PC Keybinds [ActionName] = Enum.KeyCode.G
+local Keybinds = {} 
 
 -- SYSTEM VARS
 local SkillMode = "INSTANT" -- "INSTANT" or "SMART"
-local CurrentSmartKeyData = nil -- {Key=Enum, WeaponSlot=1, Name="Z"}
+local CurrentSmartKeyData = nil 
 local SelectedComboID = nil 
 
 -- EDITOR VARS
@@ -108,7 +108,7 @@ local JoyOuter, JoyKnob, JoyDrag, ToggleBtn, JoyContainer, LockBtn, HideBtn
 -- === MANAGER FUNCTIONS ===
 UpdateTransparencyFunc = function()
     local t = AreButtonsHidden and 1 or GlobalTransparency
-    local sT = AreButtonsHidden and 1 or GlobalTransparency -- Stroke Transparency
+    local sT = AreButtonsHidden and 1 or GlobalTransparency -- Stroke follows transparency
     
     if ToggleBtn then 
         ToggleBtn.BackgroundTransparency = t
@@ -146,7 +146,7 @@ local function updateLockState()
 end
 
 -- === NOTIFICATION ===
-local NotifContainer = nil -- Init later
+local NotifContainer = nil 
 local function ShowNotification(text, color)
     if not NotifContainer then return end
     local NotifFrame = Instance.new("Frame"); NotifFrame.Size=UDim2.new(0,200,0,40); NotifFrame.Position=UDim2.new(0.5,-100,0.1,0); NotifFrame.BackgroundColor3=Theme.Sidebar; NotifFrame.BackgroundTransparency=0.1; NotifFrame.Parent=NotifContainer; createCorner(NotifFrame,8); local s=createStroke(NotifFrame, color or Theme.Accent)
@@ -156,7 +156,9 @@ end
 
 -- === CORE LOGIC ===
 local function PauseJoystickForAim()
-    -- IMPORTANT: Pause Humanoid Move for 0.03s to clear input queue
+    -- JOYSTICK PAUSE LOGIC: Stop Humanoid update for 0.03s
+    -- This allows Screen Tap to register as the primary aim vector
+    -- Thumb position (moveDir) is NOT reset, so movement resumes smoothly
     IsMovementPaused = true
     task.delay(0.03, function() IsMovementPaused = false end)
 end
@@ -183,28 +185,55 @@ local function equipWeapon(slotIdx)
     VIM:SendKeyEvent(true, key, false, game); task.wait(); VIM:SendKeyEvent(false, key, false, game); task.wait(0.05)
 end
 
+-- === COMBO RUNNER ===
+local CurrentRunningBtn = nil
+-- Forward declare for global input
+local executeComboSequence_Ref = nil 
+
+local function executeComboSequence(idx)
+    local data = Combos[idx]; if not data or not data.Button then return end
+    isRunning = true
+    local btn = data.Button
+    btn:SetAttribute("OrigText", btn.Text); btn.Text = "STOP"; btn.BackgroundColor3 = Theme.Red; btn.UIStroke.Color = Theme.Red
+    
+    task.spawn(function()
+        for i, step in ipairs(data.Steps) do
+            if not isRunning then break end
+            if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("Humanoid") or LocalPlayer.Character.Humanoid.Health <= 0 then isRunning = false; break end
+            
+            -- Auto Equip if slot is defined
+            if not isWeaponReady(step.Slot) then equipWeapon(step.Slot) end
+            
+            if step.Delay and step.Delay > 0 then task.wait(step.Delay) end
+            local map={Z=Enum.KeyCode.Z,X=Enum.KeyCode.X,C=Enum.KeyCode.C,V=Enum.KeyCode.V,F=Enum.KeyCode.F}
+            pressKey(map[step.Key], step.IsHold, step.HoldTime or 0.1)
+            task.wait(0.3)
+        end
+        isRunning = false; if btn then btn.Text = data.Name; btn.BackgroundColor3 = Theme.Sidebar; btn.UIStroke.Color = Theme.Accent end; CurrentRunningBtn = nil
+        if SelectedComboID == idx then btn.BackgroundColor3 = Theme.Green; btn.UIStroke.Color = Theme.Green end
+    end)
+end
+executeComboSequence_Ref = executeComboSequence
+
 -- === GLOBAL INPUT HANDLER ===
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     -- 1. PC KEYBIND CHECK
     if input.UserInputType == Enum.UserInputType.Keyboard and not gameProcessed then
         for action, bindKey in pairs(Keybinds) do
             if input.KeyCode == bindKey then
-                -- Trigger Logic based on action
+                -- Trigger Logic
                 if string.sub(action, 1, 1) == "C" then -- Combo
                     local id = tonumber(string.sub(action, 2))
                     if Combos[id] then
-                        -- Logic same as button click
                         if SkillMode == "INSTANT" then
                             PauseJoystickForAim()
-                            -- executeComboSequence(id) -- Defined later, need strict ordering or forward declare
+                            executeComboSequence(id)
                         else
                             SelectedComboID = id
                             ShowNotification("Combo "..id.." Selected", Theme.Green)
                         end
                     end
                 elseif ActiveVirtualKeys[action] then -- Virtual Key
-                    -- Simulate Click
-                    -- (Complex to refactor click logic out, simplified here:)
                     local vData = ActiveVirtualKeys[action]
                     if SkillMode == "INSTANT" then
                         PauseJoystickForAim()
@@ -222,9 +251,10 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 
     -- 2. SMART TRIGGER (TOUCH/CLICK WORLD)
     if not gameProcessed and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1) then
-        -- VKEY TRIGGER
+        
+        -- VKEY SMART TRIGGER
         if SkillMode == "SMART" and CurrentSmartKeyData ~= nil then
-            PauseJoystickForAim() -- FIX AIM HERE
+            PauseJoystickForAim() -- CRITICAL: Pause Joy movement to prioritize screen tap aim
             task.spawn(function()
                 if CurrentSmartKeyData.Slot and not isWeaponReady(CurrentSmartKeyData.Slot) then
                     equipWeapon(CurrentSmartKeyData.Slot)
@@ -235,46 +265,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
             end)
         end
         
-        -- COMBO TRIGGER (Needs executeComboSequence forward declared)
-    end
-end)
-
--- === COMBO RUNNER ===
-local CurrentRunningBtn = nil
--- Forward declare for global input
-local executeComboSequence_Ref = nil 
-
-local function executeComboSequence(idx)
-    local data = Combos[idx]; if not data or not data.Button then return end
-    isRunning = true
-    local btn = data.Button
-    btn:SetAttribute("OrigText", btn.Text); btn.Text = "STOP"; btn.BackgroundColor3 = Theme.Red; btn.UIStroke.Color = Theme.Red
-    
-    task.spawn(function()
-        for i, step in ipairs(data.Steps) do
-            if not isRunning then break end
-            if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("Humanoid") or LocalPlayer.Character.Humanoid.Health <= 0 then isRunning = false; break end
-            
-            if not isWeaponReady(step.Slot) then equipWeapon(step.Slot) end
-            
-            if step.Delay and step.Delay > 0 then task.wait(step.Delay) end
-            local map={Z=Enum.KeyCode.Z,X=Enum.KeyCode.X,C=Enum.KeyCode.C,V=Enum.KeyCode.V,F=Enum.KeyCode.F}
-            pressKey(map[step.Key], step.IsHold, step.HoldTime or 0.1)
-            task.wait(0.3)
-        end
-        isRunning = false; if btn then btn.Text = data.Name; btn.BackgroundColor3 = Theme.Sidebar; btn.UIStroke.Color = Theme.Accent end; CurrentRunningBtn = nil
-        -- If Smart Mode, keep green? No, V121 logic says reset or keep selection. 
-        -- V122: Reset running state but keep selection highlighted if still selected.
-        if SelectedComboID == idx then btn.BackgroundColor3 = Theme.Green; btn.UIStroke.Color = Theme.Green end
-    end)
-end
-executeComboSequence_Ref = executeComboSequence
-
--- Global Input Trigger for Combo (Inserted here to access executeComboSequence)
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1) then
+        -- COMBO SMART TRIGGER
         if SelectedComboID ~= nil and not isRunning then
-            PauseJoystickForAim()
+            PauseJoystickForAim() -- CRITICAL
             executeComboSequence(SelectedComboID)
         end
     end
@@ -335,9 +328,11 @@ RunService.RenderStepped:Connect(function()
     local hum = LocalPlayer.Character:FindFirstChild("Humanoid")
     if not hum then return end
     
-    -- JOYSTICK PAUSE LOGIC (0.03s buffer)
+    -- JOYSTICK AIM FIX (SEAMLESS RESUME)
+    -- We pause applying movement for 0.03s when skill fires.
+    -- We DO NOT clear moveDir. So when pause ends, it resumes using the thumb position.
     if IsMovementPaused then
-        hum:Move(Vector3.new(0,0,0), true) -- Stop momentarily
+        hum:Move(Vector3.new(0,0,0), true) 
         return
     end
 
