@@ -1,9 +1,7 @@
 --[[
-    VELOX TESTER V3 (MULTI-TOUCH FIX)
+    VELOX TESTER V4 (STRICT PATH FIX)
     Oleh: Gemini Assistant
-    Fitur: 
-    1. Anti-Freeze (Menggunakan Touch ID berbeda dari Analog).
-    2. Auto-Detect Button Position.
+    Fitur: Menggunakan Path Exact dari User. Anti-Freeze M1.
 ]]
 
 local Players = game:GetService("Players")
@@ -14,35 +12,36 @@ local PlayerGui = LP:WaitForChild("PlayerGui")
 local Camera = workspace.CurrentCamera
 
 -- 1. BERSIHKAN UI LAMA
-if CoreGui:FindFirstChild("VeloxTesterV3") then
-    CoreGui.VeloxTesterV3:Destroy()
+if CoreGui:FindFirstChild("VeloxTesterV4") then
+    CoreGui.VeloxTesterV4:Destroy()
 end
 
 -- 2. GUI SETUP
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "VeloxTesterV3"
+ScreenGui.Name = "VeloxTesterV4"
 ScreenGui.Parent = CoreGui
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 320, 0, 380)
-MainFrame.Position = UDim2.new(0.5, -160, 0.5, -190)
+MainFrame.Size = UDim2.new(0, 300, 0, 400)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
-Instance.new("UIStroke", MainFrame).Color = Color3.fromRGB(0, 255, 100)
+Instance.new("UIStroke", MainFrame).Color = Color3.fromRGB(255, 50, 50)
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "TESTER V3: ANTI-FREEZE"
-Title.TextColor3 = Color3.fromRGB(0, 255, 100)
+Title.Text = "TESTER V4: STRICT PATH"
+Title.TextColor3 = Color3.fromRGB(255, 50, 50)
 Title.Font = Enum.Font.GothamBlack
 Title.BackgroundTransparency = 1
 Title.Parent = MainFrame
 
+-- LOG AREA
 local LogScroll = Instance.new("ScrollingFrame")
-LogScroll.Size = UDim2.new(0.9, 0, 0.4, 0)
+LogScroll.Size = UDim2.new(0.9, 0, 0.35, 0)
 LogScroll.Position = UDim2.new(0.05, 0, 0.1, 0)
 LogScroll.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
 LogScroll.Parent = MainFrame
@@ -63,144 +62,126 @@ local function AddLog(text, color)
 end
 
 -- ==============================================================================
--- [CORE] FUNGSI TAP (MULTI-TOUCH)
+-- [CORE] FUNGSI TAP (ANTI-FREEZE)
 -- ==============================================================================
 
--- Fungsi untuk mengetuk koordinat tertentu dengan "Jari ke-2" (ID 1)
--- ID 0 = Biasanya Analog/Jari kamu
+-- Fungsi mengetuk koordinat X,Y dengan Jari ID 1 (Agar Jari ID 0 di Analog tidak putus)
 local function TapAt(x, y)
-    -- TouchStart (Tekan)
-    VirtualInputManager:SendTouchEvent(1729, 0, x, y) -- ID acak biar gak konflik
+    VirtualInputManager:SendTouchEvent(1000, 0, x, y) -- 0 = TouchStart
     task.wait(0.05)
-    -- TouchEnd (Lepas)
-    VirtualInputManager:SendTouchEvent(1729, 1, x, y)
+    VirtualInputManager:SendTouchEvent(1000, 1, x, y) -- 1 = TouchEnd
 end
 
--- Fungsi mencari tombol lalu mengetuk tengahnya
-local function TapButton(btn)
-    if not btn then return false end
-    if not btn.Visible then return false end
-
-    -- Hitung posisi tengah tombol di layar
-    local AbsolutePos = btn.AbsolutePosition
-    local AbsoluteSize = btn.AbsoluteSize
-    local CenterX = AbsolutePos.X + (AbsoluteSize.X / 2)
-    local CenterY = AbsolutePos.Y + (AbsoluteSize.Y / 2)
+-- Fungsi mencari tombol berdasarkan PATH EXACT lalu mengetuk tengahnya
+local function TapPath(guiObject, nameLog)
+    if not guiObject then
+        AddLog(nameLog .. ": NOT FOUND (Path Salah/Hilang)", Color3.fromRGB(255, 80, 80))
+        return
+    end
     
-    -- Lakukan Tap
+    if not guiObject.Visible then
+        AddLog(nameLog .. ": HIDDEN (Sedang Cooldown?)", Color3.fromRGB(255, 200, 50))
+        return
+    end
+
+    -- Hitung posisi tengah tombol
+    local AbsPos = guiObject.AbsolutePosition
+    local AbsSize = guiObject.AbsoluteSize
+    local CenterX = AbsPos.X + (AbsSize.X / 2)
+    local CenterY = AbsPos.Y + (AbsSize.Y / 2)
+    
     TapAt(CenterX, CenterY)
-    return true
+    AddLog(nameLog .. ": Tapped!", Color3.fromRGB(100, 255, 100))
 end
 
 -- ==============================================================================
--- LOGIKA TOMBOL
+-- LOGIKA TOMBOL (SESUAI REQUEST)
 -- ==============================================================================
 
 local BtnContainer = Instance.new("Frame")
-BtnContainer.Size = UDim2.new(0.9, 0, 0.45, 0)
-BtnContainer.Position = UDim2.new(0.05, 0, 0.52, 0)
+BtnContainer.Size = UDim2.new(0.9, 0, 0.5, 0)
+BtnContainer.Position = UDim2.new(0.05, 0, 0.48, 0)
 BtnContainer.BackgroundTransparency = 1
 BtnContainer.Parent = MainFrame
 local Grid = Instance.new("UIGridLayout")
-Grid.CellSize = UDim2.new(0.48, 0, 0.18, 0); Grid.CellPadding = UDim2.new(0.02, 0, 0.02, 0); Grid.Parent = BtnContainer
+Grid.CellSize = UDim2.new(0.48, 0, 0.15, 0); Grid.CellPadding = UDim2.new(0.02, 0, 0.02, 0); Grid.Parent = BtnContainer
 
 local function MakeBtn(text, cb)
     local b = Instance.new("TextButton")
-    b.Text = text; b.BackgroundColor3 = Color3.fromRGB(40,40,50); b.TextColor3 = Color3.new(1,1,1)
+    b.Text = text; b.BackgroundColor3 = Color3.fromRGB(50,50,60); b.TextColor3 = Color3.new(1,1,1)
     b.Font = Enum.Font.GothamBold; b.Parent = BtnContainer
     Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
     b.MouseButton1Click:Connect(cb)
 end
 
 -- 1. TEST M1 (SAFE ZONE TAP)
-MakeBtn("TEST M1 (SAFE)", function()
-    -- Kita tap di sebelah kanan tengah layar (Safe Zone)
-    -- Hindari area analog kiri
-    local X = Camera.ViewportSize.X * 0.7 -- 70% ke kanan
-    local Y = Camera.ViewportSize.Y * 0.5 -- 50% ke bawah
+MakeBtn("TEST M1 (ATTACK)", function()
+    -- Strategi: Ketuk layar di area kosong sebelah kanan (tempat jempol kanan biasanya berada)
+    -- Ini pasti memicu M1 jika memegang senjata
+    local X = Camera.ViewportSize.X * 0.85 -- Agak ke kanan
+    local Y = Camera.ViewportSize.Y * 0.6 -- Agak ke bawah
     
     TapAt(X, Y)
-    AddLog("M1: Tapped at Safe Zone", Color3.fromRGB(100, 255, 100))
+    AddLog("M1: Tapped Right Screen", Color3.fromRGB(100, 255, 100))
 end)
 
 -- 2. TEST JUMP
 MakeBtn("TEST JUMP", function()
-    -- Path Jump (Sesuai data kamu)
+    -- Path: game.Players.LocalPlayer.PlayerGui.TouchGui.TouchControlFrame.JumpButton
     local JumpBtn = PlayerGui:FindFirstChild("TouchGui") 
         and PlayerGui.TouchGui:FindFirstChild("TouchControlFrame") 
         and PlayerGui.TouchGui.TouchControlFrame:FindFirstChild("JumpButton")
     
-    if TapButton(JumpBtn) then
-        AddLog("Jump: Tapped Button UI", Color3.fromRGB(100, 255, 100))
-    else
-        AddLog("Jump: Button Not Found!", Color3.fromRGB(255, 80, 80))
-    end
+    TapPath(JumpBtn, "Jump")
 end)
 
--- 3. TEST HAKI (BUSO)
-MakeBtn("TEST BUSO (HAKI)", function()
-    local Ctx = PlayerGui:FindFirstChild("MobileContextButtons") 
+-- 3. TEST HAKI (KEN / OBSERVATION)
+MakeBtn("TEST HAKI (KEN)", function()
+    -- Path: ...MobileContextButtons.ContextButtonFrame.BoundActionKen.Button
+    local Context = PlayerGui:FindFirstChild("MobileContextButtons") 
         and PlayerGui.MobileContextButtons:FindFirstChild("ContextButtonFrame")
-    
-    -- Nama tombol bisa BoundActionBuso atau BoundActionKen (Cek dua-duanya)
-    local Buso = Ctx and (Ctx:FindFirstChild("BoundActionBuso") or Ctx:FindFirstChild("BoundActionAura"))
-    
-    if Buso and TapButton(Buso:FindFirstChild("Button")) then
-        AddLog("Buso: Tapped!", Color3.fromRGB(100, 255, 100))
-    else
-        AddLog("Buso: Missing/Cooldown", Color3.fromRGB(255, 80, 80))
-    end
-end)
-
--- 4. TEST SORU (FLASH STEP)
-MakeBtn("TEST SORU", function()
-    local Ctx = PlayerGui:FindFirstChild("MobileContextButtons") 
-        and PlayerGui.MobileContextButtons:FindFirstChild("ContextButtonFrame")
-    local Soru = Ctx and Ctx:FindFirstChild("BoundActionSoru")
-    
-    if Soru and TapButton(Soru:FindFirstChild("Button")) then
-        AddLog("Soru: Tapped!", Color3.fromRGB(100, 255, 100))
-    else
-        AddLog("Soru: Missing/Cooldown", Color3.fromRGB(255, 80, 80))
-    end
-end)
-
--- 5. TEST DODGE
-MakeBtn("TEST DODGE", function()
-    -- Dodge biasanya di ContextButtonFrame juga (BoundActionDodge)
-    -- ATAU di MobileControl
-    local Ctx = PlayerGui:FindFirstChild("MobileContextButtons") 
-        and PlayerGui.MobileContextButtons:FindFirstChild("ContextButtonFrame")
-    
-    local Dodge = Ctx and (Ctx:FindFirstChild("BoundActionDodge") or Ctx:FindFirstChild("BoundActionDash"))
-    
-    if Dodge and TapButton(Dodge:FindFirstChild("Button")) then
-         AddLog("Dodge: Tapped (Context)", Color3.fromRGB(100, 255, 100))
-    else
-        -- Cek Mobile Control (Backup)
-        local Main = PlayerGui:FindFirstChild("Main")
-        local Ctrl = Main and Main:FindFirstChild("MobileControl")
-        local DashBtn = Ctrl and Ctrl:FindFirstChild("Dash")
         
-        if TapButton(DashBtn) then
-            AddLog("Dodge: Tapped (MainUI)", Color3.fromRGB(100, 255, 100))
-        else
-            AddLog("Dodge: Not Found", Color3.fromRGB(255, 80, 80))
-        end
-    end
+    local Ken = Context and Context:FindFirstChild("BoundActionKen")
+    local Button = Ken and Ken:FindFirstChild("Button")
+    
+    TapPath(Button, "Haki (Ken)")
 end)
 
--- 6. TEST RACE SKILL
-MakeBtn("TEST RACE V3/V4", function()
-    local Ctx = PlayerGui:FindFirstChild("MobileContextButtons") 
+-- 4. TEST RACE SKILL
+MakeBtn("TEST RACE", function()
+    -- Path: ...MobileContextButtons.ContextButtonFrame.BoundActionRaceAbility.Button
+    local Context = PlayerGui:FindFirstChild("MobileContextButtons") 
         and PlayerGui.MobileContextButtons:FindFirstChild("ContextButtonFrame")
-    local Race = Ctx and Ctx:FindFirstChild("BoundActionRaceAbility")
+        
+    local Race = Context and Context:FindFirstChild("BoundActionRaceAbility")
+    local Button = Race and Race:FindFirstChild("Button")
     
-    if Race and TapButton(Race:FindFirstChild("Button")) then
-        AddLog("Race: Tapped!", Color3.fromRGB(100, 255, 100))
-    else
-        AddLog("Race: Not Found", Color3.fromRGB(255, 80, 80))
-    end
+    TapPath(Button, "Race Skill")
+end)
+
+-- 5. TEST SORU (FLASH STEP)
+MakeBtn("TEST SORU", function()
+    -- Path: ...MobileContextButtons.ContextButtonFrame.BoundActionSoru.Button
+    local Context = PlayerGui:FindFirstChild("MobileContextButtons") 
+        and PlayerGui.MobileContextButtons:FindFirstChild("ContextButtonFrame")
+        
+    local Soru = Context and Context:FindFirstChild("BoundActionSoru")
+    local Button = Soru and Soru:FindFirstChild("Button")
+    
+    TapPath(Button, "Soru")
+end)
+
+-- 6. TEST BUSO (HAKI ARMAMENT)
+-- Kamu tidak kasih path Buso, tapi biasanya strukturnya sama, saya tambahkan untuk jaga2
+MakeBtn("TEST BUSO (ARM)", function()
+    local Context = PlayerGui:FindFirstChild("MobileContextButtons") 
+        and PlayerGui.MobileContextButtons:FindFirstChild("ContextButtonFrame")
+    
+    -- Biasanya namanya BoundActionBuso atau BoundActionAura
+    local Buso = Context and (Context:FindFirstChild("BoundActionBuso") or Context:FindFirstChild("BoundActionAura"))
+    local Button = Buso and Buso:FindFirstChild("Button")
+    
+    TapPath(Button, "Buso Haki")
 end)
 
 -- TUTUP
