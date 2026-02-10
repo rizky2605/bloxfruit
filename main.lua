@@ -1,10 +1,8 @@
 --[[
-    VELOX V126 (FINAL COMPLETE RESTORE EDITION)
-    - RESTORED: Manual V-Key Buttons (1,2,3,4,Z,X,C,V,F) in Layout Tab.
-    - RESTORED: Full Guide Text.
-    - RESTORED: Complete Combo Editor UI.
-    - CORE: Joystick Pause 0.3s + World Space Movement + Smart Tap.
-    - SYSTEM: Save/Load/Keybinds fully integrated.
+    VELOX V127 (FINAL UI FIX)
+    - FIXED: Combo Editor Tab (UI elements restored & visible).
+    - FIXED: Guide Tab (Text restored).
+    - PRESERVED: Joystick 0.3s Pause, Smart Cast, Layout, System.
 ]]
 
 -- === SERVICES ===
@@ -56,7 +54,6 @@ local VirtualKeySelectors = {}
 local SkillMode = "INSTANT" -- "INSTANT" or "SMART"
 local CurrentSmartKeyData = nil 
 local SelectedComboID = nil 
-local SelectedWeaponType = "Melee" -- Default for VKey Adder
 
 -- EDITOR VARS
 local ResizerList = {}
@@ -155,7 +152,6 @@ end
 
 -- === CORE LOGIC ===
 local function PauseJoystickForAim()
-    -- JOYSTICK PAUSE 0.3s (Requested)
     IsMovementPaused = true
     task.delay(0.3, function() IsMovementPaused = false end)
 end
@@ -287,13 +283,35 @@ local function mkNav(icon, text, target)
     return btn
 end
 
+-- PAGE FRAMES
 local P_Guide = Instance.new("Frame"); P_Guide.Size=UDim2.new(1,0,0.85,0); P_Guide.Position=UDim2.new(0,0,0.15,0); P_Guide.BackgroundTransparency=1; P_Guide.Parent=Content; Pages["Guide"]=P_Guide
 local P_Edit = Instance.new("Frame"); P_Edit.Size=UDim2.new(1,0,0.85,0); P_Edit.Position=UDim2.new(0,0,0.15,0); P_Edit.BackgroundTransparency=1; P_Edit.Parent=Content; Pages["Editor"]=P_Edit
 local P_Control = Instance.new("ScrollingFrame"); P_Control.Size=UDim2.new(1,0,0.85,0); P_Control.Position=UDim2.new(0,0,0.15,0); P_Control.BackgroundTransparency=1; P_Control.Visible=false; P_Control.ScrollBarThickness=2; P_Control.Parent=Content; Pages["Control"]=P_Control
 local P_Lay = Instance.new("ScrollingFrame"); P_Lay.Size=UDim2.new(1,0,0.85,0); P_Lay.Position=UDim2.new(0,0,0.15,0); P_Lay.BackgroundTransparency=1; P_Lay.Visible=false; P_Lay.ScrollBarThickness=2; P_Lay.Parent=Content; Pages["Layout"]=P_Lay
 local P_Sys = Instance.new("Frame"); P_Sys.Size=UDim2.new(1,0,0.85,0); P_Sys.Position=UDim2.new(0,0,0.15,0); P_Sys.BackgroundTransparency=1; P_Sys.Visible=false; P_Sys.Parent=Content; Pages["System"]=P_Sys
 
-mkNav("ℹ️","GUIDE","Guide").TextColor3=Theme.Accent; local NavEdit=mkNav("⚔️","COMBO","Editor"); local NavCtrl=mkNav("🎮","CONTROLS","Control"); local NavLay=mkNav("🛠️","LAYOUT","Layout"); local NavSys=mkNav("⚙️","SYSTEM","System")
+-- NAVIGATION BUTTONS
+mkNav("ℹ️","GUIDE","Guide").TextColor3=Theme.Accent; 
+mkNav("⚔️","COMBO","Editor"); 
+mkNav("🛠️","LAYOUT","Layout"); 
+mkNav("🎮","CONTROLS","Control"); 
+mkNav("⚙️","SYSTEM","System")
+
+-- === GUIDE TAB (RESTORED) ===
+local GText = [[WELCOME TO VELOX!
+
+[ FEATURES ]
+• Custom Layout: Resize & Move ANY button.
+• Smart Cast: Tap skill -> Tap screen to fire.
+• Weapon Bind: Assign weapons to virtual keys.
+• PC Support: Keybinds for all functions.
+
+[ CONTROLS ]
+Use the 'Controls' tab to set PC Keybinds and change Skill Mode.
+
+[ JOYSTICK FIX ]
+Movement pauses briefly (0.3s) when firing skills to prevent aiming at feet.]]
+local GLabel = Instance.new("TextLabel"); GLabel.Size=UDim2.new(0.95,0,0.95,0); GLabel.Position=UDim2.new(0.025,0,0.025,0); GLabel.Text=GText; GLabel.TextColor3=Theme.Text; GLabel.Font=Enum.Font.Gotham; GLabel.TextSize=12; GLabel.TextXAlignment="Left"; GLabel.TextYAlignment="Top"; GLabel.BackgroundTransparency=1; GLabel.TextWrapped=true; GLabel.Parent=P_Guide
 
 -- === JOYSTICK ===
 JoyContainer = Instance.new("Frame"); JoyContainer.Size=UDim2.new(0, JOYSTICK_SIZE, 0, JOYSTICK_SIZE + 30); JoyContainer.Position=UDim2.new(0.1, 0, 0.6, 0); JoyContainer.BackgroundTransparency=1; JoyContainer.Active=false; JoyContainer.Parent=ScreenGui; JoyContainer.Visible=false; JoyContainer.ZIndex=50
@@ -377,11 +395,12 @@ local function toggleVirtualKey(keyName, slotIdx, customName)
     end
 end
 
--- === LAYOUT TAB (RESTORED) ===
+-- === LAYOUT TAB (FIXED) ===
 local LayPad = Instance.new("UIPadding"); LayPad.Parent=P_Lay; LayPad.PaddingLeft=UDim.new(0,10); LayPad.PaddingRight=UDim.new(0,10); LayPad.PaddingTop=UDim.new(0,10); LayPad.PaddingBottom=UDim.new(0,10)
 local LayList = Instance.new("UIListLayout"); LayList.Parent=P_Lay; LayList.Padding=UDim.new(0,10); LayList.SortOrder="LayoutOrder"
 LayList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() P_Lay.CanvasSize = UDim2.new(0, 0, 0, LayList.AbsoluteContentSize.Y + 20) end)
 
+-- Settings Box
 local SetBox = Instance.new("Frame"); SetBox.Size=UDim2.new(1,0,0,115); SetBox.BackgroundTransparency=1; SetBox.LayoutOrder=1; SetBox.Parent=P_Lay
 local Grid1 = Instance.new("UIGridLayout"); Grid1.Parent=SetBox; Grid1.CellSize=UDim2.new(0.47,0,0,30); Grid1.CellPadding=UDim2.new(0.04,0,0.1,0)
 local function mkTool(t,c,f,p) local b=Instance.new("TextButton"); b.Text=t; b.BackgroundColor3=Theme.Sidebar; b.TextColor3=Theme.Text; b.Font=Enum.Font.Gotham; b.TextSize=10; b.Parent=p; b.Selectable=false; createCorner(b,6); createStroke(b,c); b.MouseButton1Click:Connect(f); return b end
@@ -398,25 +417,25 @@ mkTool("ADD COMBO", Theme.Accent, function()
 end, SetBox)
 mkTool("DEL COMBO", Theme.Red, function() if #Combos<1 then return end; Combos[CurrentComboIndex].Button:Destroy(); table.remove(Combos, CurrentComboIndex); if #Combos > 0 then CurrentComboIndex=math.min(CurrentComboIndex, #Combos) else CurrentComboIndex=0 end; if ResizerUpdateFunc then ResizerUpdateFunc() end; RefreshEditorUI(); ShowNotification("Combo Deleted", Theme.Red); if RefreshControlUI then RefreshControlUI() end end, SetBox)
 
--- TRANSPARENCY
+-- Transparency
 local TransBox = Instance.new("Frame"); TransBox.Size=UDim2.new(1,0,0,30); TransBox.BackgroundTransparency=1; TransBox.LayoutOrder=2; TransBox.Parent=P_Lay
 local TLbl = Instance.new("TextLabel"); TLbl.Size=UDim2.new(0.4,0,1,0); TLbl.Text="Transparency:"; TLbl.TextColor3=Theme.SubText; TLbl.Font=Enum.Font.Gotham; TLbl.TextSize=11; TLbl.TextXAlignment="Left"; TLbl.BackgroundTransparency=1; TLbl.Parent=TransBox
 local TBg = Instance.new("Frame"); TBg.Size=UDim2.new(0.55,0,0,4); TBg.Position=UDim2.new(0.42,0,0.5,-2); TBg.BackgroundColor3=Theme.Stroke; TBg.Parent=TransBox; createCorner(TBg,2)
 local TKnob = Instance.new("TextButton"); TKnob.Size=UDim2.new(0,12,0,12); TKnob.Position=UDim2.new(0,0,0.5,-6); TKnob.BackgroundColor3=Theme.Accent; TKnob.Text=""; TKnob.Parent=TBg; TKnob.Selectable=false; createCorner(TKnob,6)
 local dragT=false; TKnob.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.Touch or i.UserInputType==Enum.UserInputType.MouseButton1 then dragT=true end end); UserInputService.InputChanged:Connect(function(i) if dragT and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then local p=math.clamp((i.Position.X-TBg.AbsolutePosition.X)/TBg.AbsoluteSize.X,0,1); TKnob.Position=UDim2.new(p,-6,0.5,-6); GlobalTransparency=p*0.9; UpdateTransparencyFunc() end end); UserInputService.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.Touch or i.UserInputType==Enum.UserInputType.MouseButton1 then dragT=false end end)
 
--- MANUAL V-KEYS 1-4 & Z-F (RESTORED)
-local VKTitle = Instance.new("TextLabel"); VKTitle.Size=UDim2.new(1,0,0,25); VKTitle.Text="ADD VIRTUAL KEYS"; VKTitle.TextColor3=Theme.Accent; VKTitle.Font=Enum.Font.GothamBold; VKTitle.TextSize=12; VKTitle.BackgroundTransparency=1; VKTitle.LayoutOrder=3; VKTitle.Parent=P_Lay
+-- Manual V-Keys (1-4 & Z-F)
+local VKTitle = Instance.new("TextLabel"); VKTitle.Size=UDim2.new(1,0,0,25); VKTitle.Text="QUICK VIRTUAL KEYS"; VKTitle.TextColor3=Theme.Accent; VKTitle.Font=Enum.Font.GothamBold; VKTitle.TextSize=12; VKTitle.BackgroundTransparency=1; VKTitle.LayoutOrder=3; VKTitle.Parent=P_Lay
 local VKBox = Instance.new("Frame"); VKBox.Size=UDim2.new(1,0,0,120); VKBox.BackgroundTransparency=1; VKBox.LayoutOrder=4; VKBox.Parent=P_Lay
 local Grid2 = Instance.new("UIGridLayout"); Grid2.Parent=VKBox; Grid2.CellSize=UDim2.new(0.3,0,0,32); Grid2.CellPadding=UDim2.new(0.03,0,0.03,0)
 local keysList = {"1", "2", "3", "4", "Z", "X", "C", "V", "F"}
 for _, k in ipairs(keysList) do
     local btn = Instance.new("TextButton"); btn.Text=k; btn.BackgroundColor3=Theme.Element; btn.TextColor3=Theme.Text; btn.Font=Enum.Font.GothamBold; btn.TextSize=11; btn.Parent=VKBox; btn.Selectable=false; createCorner(btn,4)
-    btn.MouseButton1Click:Connect(function() toggleVirtualKey(k, nil, k) end) -- Add without auto-equip first
+    btn.MouseButton1Click:Connect(function() toggleVirtualKey(k, nil, k) end)
     VirtualKeySelectors[k] = btn
 end
 
--- WEAPON V-KEY ADDER
+-- Weapon V-Key Adder
 local AddTitle = Instance.new("TextLabel"); AddTitle.Size=UDim2.new(1,0,0,20); AddTitle.Text="WEAPON BIND ADDER"; AddTitle.TextColor3=Theme.Accent; AddTitle.Font=Enum.Font.GothamBold; AddTitle.TextSize=11; AddTitle.BackgroundTransparency=1; AddTitle.LayoutOrder=5; AddTitle.Parent=P_Lay
 local VKeyAddBox = Instance.new("Frame"); VKeyAddBox.Size=UDim2.new(1,0,0,80); VKeyAddBox.BackgroundColor3=Theme.Sidebar; VKeyAddBox.LayoutOrder=6; VKeyAddBox.Parent=P_Lay; createCorner(VKeyAddBox,6)
 local TypeBtn = Instance.new("TextButton"); TypeBtn.Size=UDim2.new(0.45,0,0,30); TypeBtn.Position=UDim2.new(0.03,0,0.1,0); TypeBtn.BackgroundColor3=Theme.Element; TypeBtn.Text="Melee"; TypeBtn.TextColor3=Theme.Text; TypeBtn.Parent=VKeyAddBox; createCorner(TypeBtn,6)
@@ -427,7 +446,7 @@ TypeBtn.MouseButton1Click:Connect(function() local tList={"Melee", "Fruit", "Swo
 KeyBtn.MouseButton1Click:Connect(function() local kList={"Z", "X", "C", "V", "F"}; local idx=table.find(kList, selK) or 0; selK=kList[(idx%#kList)+1]; KeyBtn.Text=selK end)
 AddVKeyBtn.MouseButton1Click:Connect(function() local slot=1; for i,v in ipairs(WeaponData) do if v.name==selW then slot=i break end end; local id=selW.." "..selK; toggleVirtualKey(selK, slot, id) end)
 
--- RESIZER (RESTORED)
+-- Resizer
 local AdvLabel = Instance.new("TextLabel"); AdvLabel.Size=UDim2.new(1,0,0,20); AdvLabel.Text="RESIZE BUTTON"; AdvLabel.TextColor3=Theme.Accent; AdvLabel.Font=Enum.Font.GothamBold; AdvLabel.TextSize=11; AdvLabel.BackgroundTransparency=1; AdvLabel.LayoutOrder=7; AdvLabel.Parent=P_Lay
 local AdvBox = Instance.new("Frame"); AdvBox.Size=UDim2.new(1,0,0,90); AdvBox.BackgroundColor3=Theme.Sidebar; AdvBox.LayoutOrder=8; AdvBox.Parent=P_Lay; createCorner(AdvBox,6)
 local SelectBtn = Instance.new("TextButton"); SelectBtn.Size=UDim2.new(0.9,0,0,30); SelectBtn.Position=UDim2.new(0.05,0,0.1,0); SelectBtn.BackgroundColor3=Theme.Element; SelectBtn.Text="SELECT: NONE"; SelectBtn.TextColor3=Theme.Text; SelectBtn.Font=Enum.Font.GothamBold; SelectBtn.TextSize=11; SelectBtn.Parent=AdvBox; createCorner(SelectBtn,6)
@@ -439,22 +458,13 @@ ResizerUpdateFunc = function() ResizerList = {}; table.insert(ResizerList, {Name
 SelectBtn.MouseButton1Click:Connect(function() if #ResizerList == 0 then return end; ResizerIndex = ResizerIndex + 1; if ResizerIndex > #ResizerList then ResizerIndex = 1 end; local item = ResizerList[ResizerIndex]; SelectBtn.Text = "SELECT: " .. item.Name; CurrentSelectedElement = item; local currentSize = item.Obj.Size.X.Offset; local p = 0.5; if item.Type == "Joy" then p = (currentSize - 100) / 150 else p = (currentSize - 30) / 70 end; p = math.clamp(p, 0, 1); SizeKnob.Position = UDim2.new(p, -6, 0.5, -6); SizeLabel.Text = "SIZE: " .. math.floor(currentSize) .. "px" end)
 local dragS = false; SizeKnob.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.Touch or i.UserInputType==Enum.UserInputType.MouseButton1 then dragS=true end end); UserInputService.InputChanged:Connect(function(i) if dragS and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) and CurrentSelectedElement then local p = math.clamp((i.Position.X - SizeSlider.AbsolutePosition.X) / SizeSlider.AbsoluteSize.X, 0, 1); SizeKnob.Position = UDim2.new(p, -6, 0.5, -6); local newSize = 0; if CurrentSelectedElement.Type == "Joy" then newSize = 100 + (p * 150); CurrentSelectedElement.Obj.Size = UDim2.new(0, newSize, 0, newSize); JoyContainer.Size = UDim2.new(0, newSize, 0, newSize + 30); createCorner(CurrentSelectedElement.Obj, newSize) else newSize = 30 + (p * 70); CurrentSelectedElement.Obj.Size = UDim2.new(0, newSize, 0, newSize); if CurrentSelectedElement.Name:find("C") then createCorner(CurrentSelectedElement.Obj, newSize/2) end end; SizeLabel.Text = "SIZE: " .. math.floor(newSize) .. "px" end end); UserInputService.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.Touch or i.UserInputType==Enum.UserInputType.MouseButton1 then dragS=false end end)
 
--- === CONTROLS TAB ===
-local CtrlList = Instance.new("UIListLayout"); CtrlList.Parent=P_Control; CtrlList.Padding=UDim.new(0,10); CtrlList.SortOrder="LayoutOrder"
-local CtrlPad = Instance.new("UIPadding"); CtrlPad.Parent=P_Control; CtrlPad.PaddingTop=UDim.new(0,10); CtrlPad.PaddingLeft=UDim.new(0,10); CtrlPad.PaddingRight=UDim.new(0,10)
-local ModeBox = Instance.new("Frame"); ModeBox.Size=UDim2.new(1,0,0,50); ModeBox.BackgroundColor3=Theme.Sidebar; ModeBox.LayoutOrder=1; ModeBox.Parent=P_Control; createCorner(ModeBox,6)
-local ModeBtn = Instance.new("TextButton"); ModeBtn.Size=UDim2.new(0.9,0,0,30); ModeBtn.Position=UDim2.new(0.05,0,0.5,-15); ModeBtn.BackgroundColor3=Theme.Green; ModeBtn.Text="SKILL MODE: INSTANT"; ModeBtn.TextColor3=Theme.Bg; ModeBtn.Font=Enum.Font.GothamBold; ModeBtn.Parent=ModeBox; createCorner(ModeBtn,6)
-ModeBtn.MouseButton1Click:Connect(function() if SkillMode == "INSTANT" then SkillMode = "SMART"; ModeBtn.Text = "SKILL MODE: SMART TAP"; ModeBtn.BackgroundColor3 = Theme.Blue else SkillMode = "INSTANT"; ModeBtn.Text = "SKILL MODE: INSTANT"; ModeBtn.BackgroundColor3 = Theme.Green; CurrentSmartKeyData=nil; SelectedComboID=nil end end)
-local BindContainer = Instance.new("Frame"); BindContainer.AutomaticSize=Enum.AutomaticSize.Y; BindContainer.Size=UDim2.new(1,0,0,0); BindContainer.BackgroundTransparency=1; BindContainer.LayoutOrder=2; BindContainer.Parent=P_Control; local BindList = Instance.new("UIListLayout"); BindList.Parent=BindContainer; BindList.Padding=UDim.new(0,5)
-RefreshControlUI = function() for _, c in pairs(BindContainer:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end; for _, c in ipairs(Combos) do local f = Instance.new("Frame"); f.Size=UDim2.new(1,0,0,35); f.BackgroundColor3=Theme.Element; f.Parent=BindContainer; createCorner(f,6); local l = Instance.new("TextLabel"); l.Size=UDim2.new(0.6,0,1,0); l.Position=UDim2.new(0.05,0,0,0); l.Text=c.Name; l.TextColor3=Theme.Text; l.Font=Enum.Font.Gotham; l.TextXAlignment="Left"; l.BackgroundTransparency=1; l.Parent=f; local b = Instance.new("TextButton"); b.Size=UDim2.new(0.3,0,0.8,0); b.Position=UDim2.new(0.65,0,0.1,0); b.BackgroundColor3=Theme.Sidebar; b.TextColor3=Theme.Accent; b.Font=Enum.Font.GothamBold; b.Parent=f; createCorner(b,4); local bindKey = nil; for k,v in pairs(Keybinds) do if k == "C"..c.ID then bindKey=v end end; b.Text = bindKey and bindKey.Name or "BIND"; b.MouseButton1Click:Connect(function() b.Text="..."; local conn; conn = UserInputService.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.Keyboard then Keybinds["C"..c.ID] = input.KeyCode; b.Text=input.KeyCode.Name; conn:Disconnect() end end) end) end; for id, vData in pairs(ActiveVirtualKeys) do local f = Instance.new("Frame"); f.Size=UDim2.new(1,0,0,35); f.BackgroundColor3=Theme.Element; f.Parent=BindContainer; createCorner(f,6); local l = Instance.new("TextLabel"); l.Size=UDim2.new(0.6,0,1,0); l.Position=UDim2.new(0.05,0,0,0); l.Text=id; l.TextColor3=Theme.Text; l.Font=Enum.Font.Gotham; l.TextXAlignment="Left"; l.BackgroundTransparency=1; l.Parent=f; local b = Instance.new("TextButton"); b.Size=UDim2.new(0.3,0,0.8,0); b.Position=UDim2.new(0.65,0,0.1,0); b.BackgroundColor3=Theme.Sidebar; b.TextColor3=Theme.Accent; b.Font=Enum.Font.GothamBold; b.Parent=f; createCorner(b,4); local bindKey = Keybinds[id]; b.Text = bindKey and bindKey.Name or "BIND"; b.MouseButton1Click:Connect(function() b.Text="..."; local conn; conn = UserInputService.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.Keyboard then Keybinds[id] = input.KeyCode; b.Text=input.KeyCode.Name; conn:Disconnect() end end) end) end end
-
--- === COMBO EDITOR (RESTORED) ===
-local TopNav = Instance.new("Frame"); TopNav.Size=UDim2.new(1,0,0,35); TopNav.BackgroundTransparency=1; TopNav.Parent=P_Editor
+-- === COMBO EDITOR (RESTORED FIXED) ===
+local TopNav = Instance.new("Frame"); TopNav.Size=UDim2.new(1,0,0,35); TopNav.BackgroundTransparency=1; TopNav.Parent=P_Edit
 local NavPrev = Instance.new("TextButton"); NavPrev.Size=UDim2.new(0,30,0,30); NavPrev.Position=UDim2.new(0,5,0,0); NavPrev.BackgroundColor3=Theme.Element; NavPrev.Text="<"; NavPrev.TextColor3=Theme.Accent; NavPrev.Font=Enum.Font.GothamBold; NavPrev.Parent=TopNav; createCorner(NavPrev,6)
 local NavNext = Instance.new("TextButton"); NavNext.Size=UDim2.new(0,30,0,30); NavNext.Position=UDim2.new(1,-35,0,0); NavNext.BackgroundColor3=Theme.Element; NavNext.Text=">"; NavNext.TextColor3=Theme.Accent; NavNext.Font=Enum.Font.GothamBold; NavNext.Parent=TopNav; createCorner(NavNext,6)
 local NavLbl = Instance.new("TextLabel"); NavLbl.Size=UDim2.new(0.6,0,1,0); NavLbl.Position=UDim2.new(0.2,0,0,0); NavLbl.Text="No Combo Selected"; NavLbl.TextColor3=Theme.Text; NavLbl.BackgroundTransparency=1; NavLbl.Font=Enum.Font.GothamBold; NavLbl.TextSize=14; NavLbl.Parent=TopNav
-local EditScroll=Instance.new("ScrollingFrame"); EditScroll.Size=UDim2.new(1,0,0.75,0); EditScroll.Position=UDim2.new(0,0,0.12,0); EditScroll.BackgroundTransparency=1; EditScroll.ScrollBarThickness=3; EditScroll.Parent=P_Editor; local EditList=Instance.new("UIListLayout"); EditList.Parent=EditScroll; EditList.Padding=UDim.new(0,8)
-local BottomBar = Instance.new("Frame"); BottomBar.Size=UDim2.new(1,0,0,40); BottomBar.Position=UDim2.new(0,0,1,0); BottomBar.AnchorPoint=Vector2.new(0,1); BottomBar.BackgroundTransparency=1; BottomBar.Parent=P_Editor
+local EditScroll=Instance.new("ScrollingFrame"); EditScroll.Size=UDim2.new(1,0,0.75,0); EditScroll.Position=UDim2.new(0,0,0.12,0); EditScroll.BackgroundTransparency=1; EditScroll.ScrollBarThickness=3; EditScroll.Parent=P_Edit; local EditList=Instance.new("UIListLayout"); EditList.Parent=EditScroll; EditList.Padding=UDim.new(0,8)
+local BottomBar = Instance.new("Frame"); BottomBar.Size=UDim2.new(1,0,0,40); BottomBar.Position=UDim2.new(0,0,1,0); BottomBar.AnchorPoint=Vector2.new(0,1); BottomBar.BackgroundTransparency=1; BottomBar.Parent=P_Edit
 local AddAction=Instance.new("TextButton"); AddAction.Size=UDim2.new(1,0,1,-5); AddAction.Text="+ ADD ACTION"; AddAction.BackgroundColor3=Theme.Green; AddAction.TextColor3=Theme.Bg; AddAction.Font=Enum.Font.GothamBold; AddAction.Parent=BottomBar; AddAction.Selectable=false; createCorner(AddAction,6)
 
 RefreshEditorUI = function()
@@ -478,7 +488,16 @@ AddAction.MouseButton1Click:Connect(function() table.insert(Combos[CurrentComboI
 NavPrev.MouseButton1Click:Connect(function() if #Combos>1 then CurrentComboIndex=CurrentComboIndex-1; if CurrentComboIndex<1 then CurrentComboIndex=#Combos end; RefreshEditorUI() end end)
 NavNext.MouseButton1Click:Connect(function() if #Combos>1 then CurrentComboIndex=CurrentComboIndex+1; if CurrentComboIndex>#Combos then CurrentComboIndex=1 end; RefreshEditorUI() end end)
 
--- === SYSTEM TAB (RESTORED) ===
+-- === CONTROLS TAB (SKILL MODE) ===
+local CtrlList = Instance.new("UIListLayout"); CtrlList.Parent=P_Control; CtrlList.Padding=UDim.new(0,10); CtrlList.SortOrder="LayoutOrder"
+local CtrlPad = Instance.new("UIPadding"); CtrlPad.Parent=P_Control; CtrlPad.PaddingTop=UDim.new(0,10); CtrlPad.PaddingLeft=UDim.new(0,10); CtrlPad.PaddingRight=UDim.new(0,10)
+local ModeBox = Instance.new("Frame"); ModeBox.Size=UDim2.new(1,0,0,50); ModeBox.BackgroundColor3=Theme.Sidebar; ModeBox.LayoutOrder=1; ModeBox.Parent=P_Control; createCorner(ModeBox,6)
+local ModeBtn = Instance.new("TextButton"); ModeBtn.Size=UDim2.new(0.9,0,0,30); ModeBtn.Position=UDim2.new(0.05,0,0.5,-15); ModeBtn.BackgroundColor3=Theme.Green; ModeBtn.Text="SKILL MODE: INSTANT"; ModeBtn.TextColor3=Theme.Bg; ModeBtn.Font=Enum.Font.GothamBold; ModeBtn.Parent=ModeBox; createCorner(ModeBtn,6)
+ModeBtn.MouseButton1Click:Connect(function() if SkillMode == "INSTANT" then SkillMode = "SMART"; ModeBtn.Text = "SKILL MODE: SMART TAP"; ModeBtn.BackgroundColor3 = Theme.Blue else SkillMode = "INSTANT"; ModeBtn.Text = "SKILL MODE: INSTANT"; ModeBtn.BackgroundColor3 = Theme.Green; CurrentSmartKeyData=nil; SelectedComboID=nil end end)
+local BindContainer = Instance.new("Frame"); BindContainer.AutomaticSize=Enum.AutomaticSize.Y; BindContainer.Size=UDim2.new(1,0,0,0); BindContainer.BackgroundTransparency=1; BindContainer.LayoutOrder=2; BindContainer.Parent=P_Control; local BindList = Instance.new("UIListLayout"); BindList.Parent=BindContainer; BindList.Padding=UDim.new(0,5)
+RefreshControlUI = function() for _, c in pairs(BindContainer:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end; for _, c in ipairs(Combos) do local f = Instance.new("Frame"); f.Size=UDim2.new(1,0,0,35); f.BackgroundColor3=Theme.Element; f.Parent=BindContainer; createCorner(f,6); local l = Instance.new("TextLabel"); l.Size=UDim2.new(0.6,0,1,0); l.Position=UDim2.new(0.05,0,0,0); l.Text=c.Name; l.TextColor3=Theme.Text; l.Font=Enum.Font.Gotham; l.TextXAlignment="Left"; l.BackgroundTransparency=1; l.Parent=f; local b = Instance.new("TextButton"); b.Size=UDim2.new(0.3,0,0.8,0); b.Position=UDim2.new(0.65,0,0.1,0); b.BackgroundColor3=Theme.Sidebar; b.TextColor3=Theme.Accent; b.Font=Enum.Font.GothamBold; b.Parent=f; createCorner(b,4); local bindKey = nil; for k,v in pairs(Keybinds) do if k == "C"..c.ID then bindKey=v end end; b.Text = bindKey and bindKey.Name or "BIND"; b.MouseButton1Click:Connect(function() b.Text="..."; local conn; conn = UserInputService.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.Keyboard then Keybinds["C"..c.ID] = input.KeyCode; b.Text=input.KeyCode.Name; conn:Disconnect() end end) end) end; for id, vData in pairs(ActiveVirtualKeys) do local f = Instance.new("Frame"); f.Size=UDim2.new(1,0,0,35); f.BackgroundColor3=Theme.Element; f.Parent=BindContainer; createCorner(f,6); local l = Instance.new("TextLabel"); l.Size=UDim2.new(0.6,0,1,0); l.Position=UDim2.new(0.05,0,0,0); l.Text=id; l.TextColor3=Theme.Text; l.Font=Enum.Font.Gotham; l.TextXAlignment="Left"; l.BackgroundTransparency=1; l.Parent=f; local b = Instance.new("TextButton"); b.Size=UDim2.new(0.3,0,0.8,0); b.Position=UDim2.new(0.65,0,0.1,0); b.BackgroundColor3=Theme.Sidebar; b.TextColor3=Theme.Accent; b.Font=Enum.Font.GothamBold; b.Parent=f; createCorner(b,4); local bindKey = Keybinds[id]; b.Text = bindKey and bindKey.Name or "BIND"; b.MouseButton1Click:Connect(function() b.Text="..."; local conn; conn = UserInputService.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.Keyboard then Keybinds[id] = input.KeyCode; b.Text=input.KeyCode.Name; conn:Disconnect() end end) end) end end
+
+-- === SYSTEM TAB (RESTORED FIXED) ===
 local SysList = Instance.new("UIListLayout"); SysList.Parent=P_Sys; SysList.Padding=UDim.new(0,10); SysList.HorizontalAlignment="Center"
 local SaveBtn = mkTool("SAVE CONFIG", Theme.Blue, function() if CurrentConfigName then ShowPopup("SAVE OPTIONS", function(c) local b1 = Instance.new("TextButton"); b1.Size=UDim2.new(1,0,0,35); b1.BackgroundColor3=Theme.Bg; b1.Text="Overwrite '"..CurrentConfigName.."'"; b1.TextColor3=Theme.Accent; b1.Parent=c; createCorner(b1,6); b1.MouseButton1Click:Connect(function() SaveToFile(CurrentConfigName, GetCurrentState()); ClosePopup() end); local b2 = Instance.new("TextButton"); b2.Size=UDim2.new(1,0,0,35); b2.Position=UDim2.new(0,0,0,40); b2.BackgroundColor3=Theme.Bg; b2.Text="Save as New"; b2.TextColor3=Theme.Text; b2.Parent=c; createCorner(b2,6); b2.MouseButton1Click:Connect(function() ClosePopup(); ShowPopup("NEW CONFIG", function(c2) local box = Instance.new("TextBox"); box.Size=UDim2.new(1,0,0,35); box.BackgroundColor3=Theme.Element; box.Text=""; box.PlaceholderText="Enter Name..."; box.TextColor3=Theme.Text; box.Parent=c2; createCorner(box,6); local confirm = Instance.new("TextButton"); confirm.Size=UDim2.new(1,0,0,35); confirm.Position=UDim2.new(0,0,0,40); confirm.BackgroundColor3=Theme.Green; confirm.Text="CREATE"; confirm.TextColor3=Theme.Bg; confirm.Parent=c2; createCorner(confirm,6); confirm.MouseButton1Click:Connect(function() if box.Text~="" then SaveToFile(box.Text, GetCurrentState()); ClosePopup() end end); return 80 end) end); return 80 end) else ShowPopup("NEW CONFIG", function(c) local box = Instance.new("TextBox"); box.Size=UDim2.new(1,0,0,35); box.BackgroundColor3=Theme.Element; box.Text=""; box.PlaceholderText="Enter Name..."; box.TextColor3=Theme.Text; box.Parent=c; createCorner(box,6); local confirm = Instance.new("TextButton"); confirm.Size=UDim2.new(1,0,0,35); confirm.Position=UDim2.new(0,0,0,40); confirm.BackgroundColor3=Theme.Green; confirm.Text="CREATE"; confirm.TextColor3=Theme.Bg; confirm.Parent=c; createCorner(confirm,6); confirm.MouseButton1Click:Connect(function() if box.Text~="" then SaveToFile(box.Text, GetCurrentState()); ClosePopup() end end); return 80 end) end end, P_Sys); SaveBtn.Size=UDim2.new(0.9,0,0,45)
 local LoadBtn = mkTool("LOAD CONFIG", Theme.Blue, function() ShowPopup("SELECT CONFIG", function(container) local scroll = Instance.new("ScrollingFrame"); scroll.Size=UDim2.new(1,0,0,150); scroll.BackgroundTransparency=1; scroll.Parent=container; scroll.ScrollBarThickness=3; local layout = Instance.new("UIListLayout"); layout.Parent=scroll; layout.Padding=UDim.new(0,2); local count = 0; if isfile(FileName) then local r = readfile(FileName); local all = HttpService:JSONDecode(r); for name, _ in pairs(all) do if name ~= "LastUsed" then count = count + 1; local b = Instance.new("TextButton"); b.Size=UDim2.new(1,0,0,30); b.BackgroundColor3=Theme.Bg; b.Text=name; b.TextColor3=Theme.SubText; b.Parent=scroll; createCorner(b,6); b.MouseButton1Click:Connect(function() ClosePopup(); ShowPopup("MANAGE: "..name, function(c2) local l = Instance.new("TextButton"); l.Size=UDim2.new(1,0,0,30); l.BackgroundColor3=Theme.Green; l.Text="LOAD"; l.TextColor3=Theme.Bg; l.Parent=c2; createCorner(l,6); l.MouseButton1Click:Connect(function() LoadSpecific(name); ClosePopup() end); local r = Instance.new("TextButton"); r.Size=UDim2.new(1,0,0,30); r.Position=UDim2.new(0,0,0,35); r.BackgroundColor3=Theme.Blue; r.Text="RENAME"; r.TextColor3=Theme.Bg; r.Parent=c2; createCorner(r,6); r.MouseButton1Click:Connect(function() ClosePopup(); ShowPopup("RENAME TO...", function(c3) local box = Instance.new("TextBox"); box.Size=UDim2.new(1,0,0,35); box.BackgroundColor3=Theme.Element; box.Text=""; box.PlaceholderText="New Name..."; box.TextColor3=Theme.Text; box.Parent=c3; createCorner(box,6); local confirm = Instance.new("TextButton"); confirm.Size=UDim2.new(1,0,0,35); confirm.Position=UDim2.new(0,0,0,40); confirm.BackgroundColor3=Theme.Blue; confirm.Text="UPDATE"; confirm.TextColor3=Theme.Bg; confirm.Parent=c3; createCorner(confirm,6); confirm.MouseButton1Click:Connect(function() if box.Text ~= "" and box.Text ~= name then local f = readfile(FileName); local d = HttpService:JSONDecode(f); d[box.Text] = d[name]; d[name] = nil; if d["LastUsed"] == name then d["LastUsed"] = box.Text end; writefile(FileName, HttpService:JSONEncode(d)); ClosePopup(); ShowNotification("Renamed!", Theme.Blue) end end); return 80 end) end); local d = Instance.new("TextButton"); d.Size=UDim2.new(1,0,0,30); d.Position=UDim2.new(0,0,0,70); d.BackgroundColor3=Theme.Red; d.Text="DELETE"; d.TextColor3=Theme.Bg; d.Parent=c2; createCorner(d,6); d.MouseButton1Click:Connect(function() local f = readfile(FileName); local d = HttpService:JSONDecode(f); d[name] = nil; if d["LastUsed"]==name then d["LastUsed"]=nil end; writefile(FileName, HttpService:JSONEncode(d)); ClosePopup(); ShowNotification("Deleted", Theme.Red) end); return 105 end) end) end end end; scroll.CanvasSize = UDim2.new(0,0,0, count * 32); return 150 end) end, P_Sys); LoadBtn.Size=UDim2.new(0.9,0,0,45)
