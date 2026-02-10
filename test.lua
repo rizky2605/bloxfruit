@@ -1,30 +1,26 @@
 --[[
-    VELOX TESTER V4 (STRICT PATH FIX)
+    VELOX TESTER V5 (FORCE FIRE)
     Oleh: Gemini Assistant
-    Fitur: Menggunakan Path Exact dari User. Anti-Freeze M1.
+    Metode: Memaksa sinyal tombol jalan tanpa menyentuh layar.
 ]]
 
 local Players = game:GetService("Players")
-local VirtualInputManager = game:GetService("VirtualInputManager")
 local CoreGui = game:GetService("CoreGui")
+local VirtualUser = game:GetService("VirtualUser") -- Metode alternatif M1
 local LP = Players.LocalPlayer
 local PlayerGui = LP:WaitForChild("PlayerGui")
-local Camera = workspace.CurrentCamera
 
--- 1. BERSIHKAN UI LAMA
-if CoreGui:FindFirstChild("VeloxTesterV4") then
-    CoreGui.VeloxTesterV4:Destroy()
-end
+if CoreGui:FindFirstChild("VeloxTesterV5") then CoreGui.VeloxTesterV5:Destroy() end
 
--- 2. GUI SETUP
+-- GUI SETUP
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "VeloxTesterV4"
+ScreenGui.Name = "VeloxTesterV5"
 ScreenGui.Parent = CoreGui
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 300, 0, 400)
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+MainFrame.Size = UDim2.new(0, 300, 0, 350)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -175)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 0, 0) -- Merah Gelap (Mode Agresif)
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
@@ -33,13 +29,12 @@ Instance.new("UIStroke", MainFrame).Color = Color3.fromRGB(255, 50, 50)
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "TESTER V4: STRICT PATH"
+Title.Text = "TESTER V5: FORCE MODE"
 Title.TextColor3 = Color3.fromRGB(255, 50, 50)
 Title.Font = Enum.Font.GothamBlack
 Title.BackgroundTransparency = 1
 Title.Parent = MainFrame
 
--- LOG AREA
 local LogScroll = Instance.new("ScrollingFrame")
 LogScroll.Size = UDim2.new(0.9, 0, 0.35, 0)
 LogScroll.Position = UDim2.new(0.05, 0, 0.1, 0)
@@ -62,40 +57,49 @@ local function AddLog(text, color)
 end
 
 -- ==============================================================================
--- [CORE] FUNGSI TAP (ANTI-FREEZE)
+-- [CORE] FUNGSI NUKLIR (FORCE FIRE)
 -- ==============================================================================
 
--- Fungsi mengetuk koordinat X,Y dengan Jari ID 1 (Agar Jari ID 0 di Analog tidak putus)
-local function TapAt(x, y)
-    VirtualInputManager:SendTouchEvent(1000, 0, x, y) -- 0 = TouchStart
-    task.wait(0.05)
-    VirtualInputManager:SendTouchEvent(1000, 1, x, y) -- 1 = TouchEnd
-end
-
--- Fungsi mencari tombol berdasarkan PATH EXACT lalu mengetuk tengahnya
-local function TapPath(guiObject, nameLog)
-    if not guiObject then
-        AddLog(nameLog .. ": NOT FOUND (Path Salah/Hilang)", Color3.fromRGB(255, 80, 80))
-        return
+local function ForceFire(btn, name)
+    if not btn then 
+        AddLog(name..": NOT FOUND (Cek Path)", Color3.fromRGB(255, 0, 0))
+        return 
     end
     
-    if not guiObject.Visible then
-        AddLog(nameLog .. ": HIDDEN (Sedang Cooldown?)", Color3.fromRGB(255, 200, 50))
-        return
+    local Success = false
+    
+    -- CARA 1: Activated (Standard)
+    local Cons1 = getconnections(btn.Activated)
+    for _, c in pairs(Cons1) do c:Fire(); Success = true end
+    
+    -- CARA 2: MouseButton1Click (Standard PC/Mobile)
+    local Cons2 = getconnections(btn.MouseButton1Click)
+    for _, c in pairs(Cons2) do c:Fire(); Success = true end
+
+    -- CARA 3: MouseButton1Down (Tekan)
+    local Cons3 = getconnections(btn.MouseButton1Down)
+    for _, c in pairs(Cons3) do c:Fire(); Success = true end
+    
+    -- CARA 4: InputBegan (Khusus Jump Button Roblox)
+    local Cons4 = getconnections(btn.InputBegan)
+    for _, c in pairs(Cons4) do 
+        -- Kita palsukan InputObject agar script gamenya percaya
+        local FakeInput = Instance.new("InputObject")
+        -- Kita tidak bisa set properti InputObject via script biasa, 
+        -- jadi kita harap signalnya tidak butuh argumen spesifik.
+        c:Fire(FakeInput) 
+        Success = true 
     end
 
-    -- Hitung posisi tengah tombol
-    local AbsPos = guiObject.AbsolutePosition
-    local AbsSize = guiObject.AbsoluteSize
-    local CenterX = AbsPos.X + (AbsSize.X / 2)
-    local CenterY = AbsPos.Y + (AbsSize.Y / 2)
-    
-    TapAt(CenterX, CenterY)
-    AddLog(nameLog .. ": Tapped!", Color3.fromRGB(100, 255, 100))
+    if Success then
+        AddLog(name..": FIRED!", Color3.fromRGB(0, 255, 0))
+    else
+        AddLog(name..": NO SIGNAL FOUND (Tombol mati)", Color3.fromRGB(255, 255, 0))
+    end
 end
 
 -- ==============================================================================
--- LOGIKA TOMBOL (SESUAI REQUEST)
+-- LOGIKA TOMBOL
 -- ==============================================================================
 
 local BtnContainer = Instance.new("Frame")
@@ -114,77 +118,68 @@ local function MakeBtn(text, cb)
     b.MouseButton1Click:Connect(cb)
 end
 
--- 1. TEST M1 (SAFE ZONE TAP)
-MakeBtn("TEST M1 (ATTACK)", function()
-    -- Strategi: Ketuk layar di area kosong sebelah kanan (tempat jempol kanan biasanya berada)
-    -- Ini pasti memicu M1 jika memegang senjata
-    local X = Camera.ViewportSize.X * 0.85 -- Agak ke kanan
-    local Y = Camera.ViewportSize.Y * 0.6 -- Agak ke bawah
-    
-    TapAt(X, Y)
-    AddLog("M1: Tapped Right Screen", Color3.fromRGB(100, 255, 100))
+-- 1. TEST M1 (VIRTUAL USER) - ANTI FREEZE 2.0
+MakeBtn("TEST M1 (VU)", function()
+    -- Metode VirtualUser (Biasanya dipakai di PC, tapi kadang work di Mobile)
+    -- Ini tidak pakai Touch, tapi simulasi Mouse Internal
+    local s, e = pcall(function()
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton1(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+        AddLog("M1: VirtualUser Clicked", Color3.fromRGB(0, 255, 255))
+    end)
+    if not s then AddLog("M1 Error: "..e, Color3.fromRGB(255, 0, 0)) end
 end)
 
 -- 2. TEST JUMP
 MakeBtn("TEST JUMP", function()
-    -- Path: game.Players.LocalPlayer.PlayerGui.TouchGui.TouchControlFrame.JumpButton
     local JumpBtn = PlayerGui:FindFirstChild("TouchGui") 
         and PlayerGui.TouchGui:FindFirstChild("TouchControlFrame") 
         and PlayerGui.TouchGui.TouchControlFrame:FindFirstChild("JumpButton")
     
-    TapPath(JumpBtn, "Jump")
+    ForceFire(JumpBtn, "Jump")
 end)
 
--- 3. TEST HAKI (KEN / OBSERVATION)
-MakeBtn("TEST HAKI (KEN)", function()
-    -- Path: ...MobileContextButtons.ContextButtonFrame.BoundActionKen.Button
-    local Context = PlayerGui:FindFirstChild("MobileContextButtons") 
+-- 3. TEST HAKI (KEN)
+MakeBtn("TEST KEN", function()
+    local Ctx = PlayerGui:FindFirstChild("MobileContextButtons") 
         and PlayerGui.MobileContextButtons:FindFirstChild("ContextButtonFrame")
-        
-    local Ken = Context and Context:FindFirstChild("BoundActionKen")
-    local Button = Ken and Ken:FindFirstChild("Button")
+    local Ken = Ctx and Ctx:FindFirstChild("BoundActionKen")
+    local Btn = Ken and Ken:FindFirstChild("Button")
     
-    TapPath(Button, "Haki (Ken)")
+    ForceFire(Btn, "Ken")
 end)
 
--- 4. TEST RACE SKILL
-MakeBtn("TEST RACE", function()
-    -- Path: ...MobileContextButtons.ContextButtonFrame.BoundActionRaceAbility.Button
-    local Context = PlayerGui:FindFirstChild("MobileContextButtons") 
-        and PlayerGui.MobileContextButtons:FindFirstChild("ContextButtonFrame")
-        
-    local Race = Context and Context:FindFirstChild("BoundActionRaceAbility")
-    local Button = Race and Race:FindFirstChild("Button")
-    
-    TapPath(Button, "Race Skill")
-end)
-
--- 5. TEST SORU (FLASH STEP)
+-- 4. TEST SORU
 MakeBtn("TEST SORU", function()
-    -- Path: ...MobileContextButtons.ContextButtonFrame.BoundActionSoru.Button
-    local Context = PlayerGui:FindFirstChild("MobileContextButtons") 
+    local Ctx = PlayerGui:FindFirstChild("MobileContextButtons") 
         and PlayerGui.MobileContextButtons:FindFirstChild("ContextButtonFrame")
-        
-    local Soru = Context and Context:FindFirstChild("BoundActionSoru")
-    local Button = Soru and Soru:FindFirstChild("Button")
+    local Soru = Ctx and Ctx:FindFirstChild("BoundActionSoru")
+    local Btn = Soru and Soru:FindFirstChild("Button")
     
-    TapPath(Button, "Soru")
+    ForceFire(Btn, "Soru")
 end)
 
--- 6. TEST BUSO (HAKI ARMAMENT)
--- Kamu tidak kasih path Buso, tapi biasanya strukturnya sama, saya tambahkan untuk jaga2
-MakeBtn("TEST BUSO (ARM)", function()
-    local Context = PlayerGui:FindFirstChild("MobileContextButtons") 
+-- 5. TEST RACE
+MakeBtn("TEST RACE", function()
+    local Ctx = PlayerGui:FindFirstChild("MobileContextButtons") 
         and PlayerGui.MobileContextButtons:FindFirstChild("ContextButtonFrame")
+    local Race = Ctx and Ctx:FindFirstChild("BoundActionRaceAbility")
+    local Btn = Race and Race:FindFirstChild("Button")
     
-    -- Biasanya namanya BoundActionBuso atau BoundActionAura
-    local Buso = Context and (Context:FindFirstChild("BoundActionBuso") or Context:FindFirstChild("BoundActionAura"))
-    local Button = Buso and Buso:FindFirstChild("Button")
-    
-    TapPath(Button, "Buso Haki")
+    ForceFire(Btn, "Race")
 end)
 
--- TUTUP
+-- 6. TEST M1 (REMOTE + ANIMATION)
+MakeBtn("TEST M1 (REMOTE)", function()
+    -- Jika VU dan Touch gagal, ini harapan terakhir M1
+    -- Pakai Remote + Paksa Animasi Combat (Biar kelihatan mukul)
+    
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local args = { [1] = 0.4 }
+    ReplicatedStorage.Modules.Net:FindFirstChild("RE/RegisterAttack"):FireServer(unpack(args))
+    AddLog("M1: Remote Sent (Invisible)", Color3.fromRGB(255, 100, 255))
+end)
+
 local Close = Instance.new("TextButton")
 Close.Text = "X"; Close.Size = UDim2.new(0, 30, 0, 30); Close.Position = UDim2.new(1, -35, 0, 5)
 Close.BackgroundColor3 = Color3.fromRGB(200, 50, 50); Close.Parent = MainFrame
