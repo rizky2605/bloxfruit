@@ -1,187 +1,299 @@
 --[[
-    VELOX TESTER V5 (FORCE FIRE)
-    Oleh: Gemini Assistant
-    Metode: Memaksa sinyal tombol jalan tanpa menyentuh layar.
+    VELOX INVENTORY SCANNER (FOUNDATION TEST)
+    Fungsi: Mendeteksi nama senjata di Slot 1-4 secara otomatis.
 ]]
 
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
-local VirtualUser = game:GetService("VirtualUser") -- Metode alternatif M1
 local LP = Players.LocalPlayer
-local PlayerGui = LP:WaitForChild("PlayerGui")
 
-if CoreGui:FindFirstChild("VeloxTesterV5") then CoreGui.VeloxTesterV5:Destroy() end
+-- 1. BERSIHKAN UI LAMA
+if CoreGui:FindFirstChild("VeloxScanner") then
+    CoreGui.VeloxScanner:Destroy()
+end
 
--- GUI SETUP
+-- 2. GUI SETUP
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "VeloxTesterV5"
+ScreenGui.Name = "VeloxScanner"
 ScreenGui.Parent = CoreGui
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 300, 0, 350)
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -175)
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 0, 0) -- Merah Gelap (Mode Agresif)
+MainFrame.Size = UDim2.new(0, 300, 0, 250)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -125)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
-Instance.new("UIStroke", MainFrame).Color = Color3.fromRGB(255, 50, 50)
+Instance.new("UIStroke", MainFrame).Color = Color3.fromRGB(255, 180, 0)
 
+-- JUDUL
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "TESTER V5: FORCE MODE"
-Title.TextColor3 = Color3.fromRGB(255, 50, 50)
+Title.Text = "INVENTORY SLOT SCANNER"
+Title.TextColor3 = Color3.fromRGB(255, 180, 0)
 Title.Font = Enum.Font.GothamBlack
 Title.BackgroundTransparency = 1
 Title.Parent = MainFrame
 
-local LogScroll = Instance.new("ScrollingFrame")
-LogScroll.Size = UDim2.new(0.9, 0, 0.35, 0)
-LogScroll.Position = UDim2.new(0.05, 0, 0.1, 0)
-LogScroll.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
-LogScroll.Parent = MainFrame
-local UIList = Instance.new("UIListLayout"); UIList.Parent=LogScroll
+-- WADAH HASIL SCAN
+local ResultContainer = Instance.new("Frame")
+ResultContainer.Size = UDim2.new(0.9, 0, 0.6, 0)
+ResultContainer.Position = UDim2.new(0.05, 0, 0.15, 0)
+ResultContainer.BackgroundTransparency = 1
+ResultContainer.Parent = MainFrame
 
-local function AddLog(text, color)
-    local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(1, 0, 0, 18)
-    Label.BackgroundTransparency = 1
-    Label.Text = "> " .. text
-    Label.TextColor3 = color or Color3.fromRGB(255, 255, 255)
-    Label.Font = Enum.Font.Code
-    Label.TextSize = 10
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = LogScroll
-    LogScroll.CanvasSize = UDim2.new(0, 0, 0, UIList.AbsoluteContentSize.Y)
-    LogScroll.CanvasPosition = Vector2.new(0, 9999)
+local UIList = Instance.new("UIListLayout")
+UIList.Parent = ResultContainer
+UIList.Padding = UDim.new(0, 5)
+
+-- Fungsi Membuat Label Slot
+local SlotsLabels = {}
+for i = 1, 4 do
+    local Lbl = Instance.new("TextLabel")
+    Lbl.Size = UDim2.new(1, 0, 0, 30)
+    Lbl.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+    Lbl.TextColor3 = Color3.fromRGB(150, 150, 150)
+    Lbl.Text = "Slot " .. i .. ": [ Kosong ]"
+    Lbl.Font = Enum.Font.Code
+    Lbl.TextSize = 12
+    Lbl.TextXAlignment = Enum.TextXAlignment.Left
+    Lbl.Parent = ResultContainer
+    Instance.new("UICorner", Lbl).CornerRadius = UDim.new(0, 6)
+    
+    -- Padding Text
+    local P = Instance.new("UIPadding")
+    P.PaddingLeft = UDim.new(0, 10)
+    P.Parent = Lbl
+    
+    SlotsLabels[i] = Lbl
 end
 
--- ==============================================================================
--- [CORE] FUNGSI NUKLIR (FORCE FIRE)
--- ==============================================================================
+-- TOMBOL REFRESH
+local ScanBtn = Instance.new("TextButton")
+ScanBtn.Size = UDim2.new(0.9, 0, 0, 40)
+ScanBtn.Position = UDim2.new(0.05, 0, 0.8, 0)
+ScanBtn.BackgroundColor3 = Color3.fromRGB(45, 200, 100)
+ScanBtn.Text = "SCAN INVENTORY SEKARANG"
+ScanBtn.TextColor3 = Color3.fromRGB(20, 20, 20)
+ScanBtn.Font = Enum.Font.GothamBold
+ScanBtn.Parent = MainFrame
+Instance.new("UICorner", ScanBtn).CornerRadius = UDim.new(0, 6)
 
-local function ForceFire(btn, name)
-    if not btn then 
-        AddLog(name..": NOT FOUND (Cek Path)", Color3.fromRGB(255, 0, 0))
-        return 
-    end
-    
-    local Success = false
-    
-    -- CARA 1: Activated (Standard)
-    local Cons1 = getconnections(btn.Activated)
-    for _, c in pairs(Cons1) do c:Fire(); Success = true end
-    
-    -- CARA 2: MouseButton1Click (Standard PC/Mobile)
-    local Cons2 = getconnections(btn.MouseButton1Click)
-    for _, c in pairs(Cons2) do c:Fire(); Success = true end
-
-    -- CARA 3: MouseButton1Down (Tekan)
-    local Cons3 = getconnections(btn.MouseButton1Down)
-    for _, c in pairs(Cons3) do c:Fire(); Success = true end
-    
-    -- CARA 4: InputBegan (Khusus Jump Button Roblox)
-    local Cons4 = getconnections(btn.InputBegan)
-    for _, c in pairs(Cons4) do 
-        -- Kita palsukan InputObject agar script gamenya percaya
-        local FakeInput = Instance.new("InputObject")
-        -- Kita tidak bisa set properti InputObject via script biasa, 
-        -- jadi kita harap signalnya tidak butuh argumen spesifik.
-        c:Fire(FakeInput) 
-        Success = true 
-    end
-
-    if Success then
-        AddLog(name..": FIRED!", Color3.fromRGB(0, 255, 0))
-    else
-        AddLog(name..": NO SIGNAL FOUND (Tombol mati)", Color3.fromRGB(255, 255, 0))
-    end
-end
-
--- ==============================================================================
--- LOGIKA TOMBOL
--- ==============================================================================
-
-local BtnContainer = Instance.new("Frame")
-BtnContainer.Size = UDim2.new(0.9, 0, 0.5, 0)
-BtnContainer.Position = UDim2.new(0.05, 0, 0.48, 0)
-BtnContainer.BackgroundTransparency = 1
-BtnContainer.Parent = MainFrame
-local Grid = Instance.new("UIGridLayout")
-Grid.CellSize = UDim2.new(0.48, 0, 0.15, 0); Grid.CellPadding = UDim2.new(0.02, 0, 0.02, 0); Grid.Parent = BtnContainer
-
-local function MakeBtn(text, cb)
-    local b = Instance.new("TextButton")
-    b.Text = text; b.BackgroundColor3 = Color3.fromRGB(50,50,60); b.TextColor3 = Color3.new(1,1,1)
-    b.Font = Enum.Font.GothamBold; b.Parent = BtnContainer
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
-    b.MouseButton1Click:Connect(cb)
-end
-
--- 1. TEST M1 (VIRTUAL USER) - ANTI FREEZE 2.0
-MakeBtn("TEST M1 (VU)", function()
-    -- Metode VirtualUser (Biasanya dipakai di PC, tapi kadang work di Mobile)
-    -- Ini tidak pakai Touch, tapi simulasi Mouse Internal
-    local s, e = pcall(function()
-        VirtualUser:CaptureController()
-        VirtualUser:ClickButton1(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-        AddLog("M1: VirtualUser Clicked", Color3.fromRGB(0, 255, 255))
-    end)
-    if not s then AddLog("M1 Error: "..e, Color3.fromRGB(255, 0, 0)) end
-end)
-
--- 2. TEST JUMP
-MakeBtn("TEST JUMP", function()
-    local JumpBtn = PlayerGui:FindFirstChild("TouchGui") 
-        and PlayerGui.TouchGui:FindFirstChild("TouchControlFrame") 
-        and PlayerGui.TouchGui.TouchControlFrame:FindFirstChild("JumpButton")
-    
-    ForceFire(JumpBtn, "Jump")
-end)
-
--- 3. TEST HAKI (KEN)
-MakeBtn("TEST KEN", function()
-    local Ctx = PlayerGui:FindFirstChild("MobileContextButtons") 
-        and PlayerGui.MobileContextButtons:FindFirstChild("ContextButtonFrame")
-    local Ken = Ctx and Ctx:FindFirstChild("BoundActionKen")
-    local Btn = Ken and Ken:FindFirstChild("Button")
-    
-    ForceFire(Btn, "Ken")
-end)
-
--- 4. TEST SORU
-MakeBtn("TEST SORU", function()
-    local Ctx = PlayerGui:FindFirstChild("MobileContextButtons") 
-        and PlayerGui.MobileContextButtons:FindFirstChild("ContextButtonFrame")
-    local Soru = Ctx and Ctx:FindFirstChild("BoundActionSoru")
-    local Btn = Soru and Soru:FindFirstChild("Button")
-    
-    ForceFire(Btn, "Soru")
-end)
-
--- 5. TEST RACE
-MakeBtn("TEST RACE", function()
-    local Ctx = PlayerGui:FindFirstChild("MobileContextButtons") 
-        and PlayerGui.MobileContextButtons:FindFirstChild("ContextButtonFrame")
-    local Race = Ctx and Ctx:FindFirstChild("BoundActionRaceAbility")
-    local Btn = Race and Race:FindFirstChild("Button")
-    
-    ForceFire(Btn, "Race")
-end)
-
--- 6. TEST M1 (REMOTE + ANIMATION)
-MakeBtn("TEST M1 (REMOTE)", function()
-    -- Jika VU dan Touch gagal, ini harapan terakhir M1
-    -- Pakai Remote + Paksa Animasi Combat (Biar kelihatan mukul)
-    
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local args = { [1] = 0.4 }
-    ReplicatedStorage.Modules.Net:FindFirstChild("RE/RegisterAttack"):FireServer(unpack(args))
-    AddLog("M1: Remote Sent (Invisible)", Color3.fromRGB(255, 100, 255))
-end)
-
+-- TUTUP
 local Close = Instance.new("TextButton")
-Close.Text = "X"; Close.Size = UDim2.new(0, 30, 0, 30); Close.Position = UDim2.new(1, -35, 0, 5)
+Close.Text = "X"; Close.Size = UDim2.new(0, 25, 0, 25); Close.Position = UDim2.new(1, -30, 0, 5)
 Close.BackgroundColor3 = Color3.fromRGB(200, 50, 50); Close.Parent = MainFrame
 Instance.new("UICorner", Close).CornerRadius = UDim.new(0, 6)
 Close.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+-- ==============================================================================
+-- LOGIKA DETEKSI (THE BRAIN)
+-- ==============================================================================
+
+local function ScanInventory()
+    -- Reset Label
+    for i = 1, 4 do
+        SlotsLabels[i].Text = "Slot " .. i .. ": [ Kosong ]"
+        SlotsLabels[i].TextColor3 = Color3.fromRGB(150, 150, 150)
+    end
+    
+    local FoundItems = {}
+    
+    -- Fungsi Helper untuk Cek Tool
+    local function CheckTool(tool)
+        if not tool:IsA("Tool") then return end
+        
+        -- Cek Tipe Senjata berdasarkan ToolTip
+        local Type = tool.ToolTip -- Melee, Blox Fruit, Sword, Gun
+        local Name = tool.Name
+        
+        if Type == "Melee" then
+            SlotsLabels[1].Text = "Slot 1 (Melee): " .. Name
+            SlotsLabels[1].TextColor3 = Color3.fromRGB(255, 150, 0) -- Orange
+            FoundItems[1] = Name
+            
+        elseif Type == "Blox Fruit" then
+            SlotsLabels[2].Text = "Slot 2 (Fruit): " .. Name
+            SlotsLabels[2].TextColor3 = Color3.fromRGB(200, 50, 255) -- Ungu
+            FoundItems[2] = Name
+            
+        elseif Type == "Sword" then
+            SlotsLabels[3].Text = "Slot 3 (Sword): " .. Name
+            SlotsLabels[3].TextColor3 = Color3.fromRGB(0, 150, 255) -- Biru
+            FoundItems[3] = Name
+            
+        elseif Type == "Gun" then
+            SlotsLabels[4].Text = "Slot 4 (Gun): " .. Name
+            SlotsLabels[4].TextColor3 = Color3.fromRGB(255, 255, 100) -- Kuning
+            FoundItems[4] = Name
+        end
+    end
+    
+    -- 1. Scan apa yang sedang DIPEGANG (Character)
+    for _, t in pairs(LP.Character:GetChildren()) do
+        CheckTool(t)
+    end
+    
+    -- 2. Scan apa yang ada di TAS (Backpack)
+    for _, t in pairs(LP.Backpack:GetChildren()) do
+        CheckTool(t)
+    end
+    
+    return FoundItems
+end
+
+-- Hubungkan Tombol
+ScanBtn.MouseButton1Click:Connect(ScanInventory)
+
+-- Auto Scan saat script dijalankan
+ScanInventory()--[[
+    VELOX INVENTORY SCANNER (FOUNDATION TEST)
+    Fungsi: Mendeteksi nama senjata di Slot 1-4 secara otomatis.
+]]
+
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local LP = Players.LocalPlayer
+
+-- 1. BERSIHKAN UI LAMA
+if CoreGui:FindFirstChild("VeloxScanner") then
+    CoreGui.VeloxScanner:Destroy()
+end
+
+-- 2. GUI SETUP
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "VeloxScanner"
+ScreenGui.Parent = CoreGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 300, 0, 250)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -125)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
+Instance.new("UIStroke", MainFrame).Color = Color3.fromRGB(255, 180, 0)
+
+-- JUDUL
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Text = "INVENTORY SLOT SCANNER"
+Title.TextColor3 = Color3.fromRGB(255, 180, 0)
+Title.Font = Enum.Font.GothamBlack
+Title.BackgroundTransparency = 1
+Title.Parent = MainFrame
+
+-- WADAH HASIL SCAN
+local ResultContainer = Instance.new("Frame")
+ResultContainer.Size = UDim2.new(0.9, 0, 0.6, 0)
+ResultContainer.Position = UDim2.new(0.05, 0, 0.15, 0)
+ResultContainer.BackgroundTransparency = 1
+ResultContainer.Parent = MainFrame
+
+local UIList = Instance.new("UIListLayout")
+UIList.Parent = ResultContainer
+UIList.Padding = UDim.new(0, 5)
+
+-- Fungsi Membuat Label Slot
+local SlotsLabels = {}
+for i = 1, 4 do
+    local Lbl = Instance.new("TextLabel")
+    Lbl.Size = UDim2.new(1, 0, 0, 30)
+    Lbl.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+    Lbl.TextColor3 = Color3.fromRGB(150, 150, 150)
+    Lbl.Text = "Slot " .. i .. ": [ Kosong ]"
+    Lbl.Font = Enum.Font.Code
+    Lbl.TextSize = 12
+    Lbl.TextXAlignment = Enum.TextXAlignment.Left
+    Lbl.Parent = ResultContainer
+    Instance.new("UICorner", Lbl).CornerRadius = UDim.new(0, 6)
+    
+    -- Padding Text
+    local P = Instance.new("UIPadding")
+    P.PaddingLeft = UDim.new(0, 10)
+    P.Parent = Lbl
+    
+    SlotsLabels[i] = Lbl
+end
+
+-- TOMBOL REFRESH
+local ScanBtn = Instance.new("TextButton")
+ScanBtn.Size = UDim2.new(0.9, 0, 0, 40)
+ScanBtn.Position = UDim2.new(0.05, 0, 0.8, 0)
+ScanBtn.BackgroundColor3 = Color3.fromRGB(45, 200, 100)
+ScanBtn.Text = "SCAN INVENTORY SEKARANG"
+ScanBtn.TextColor3 = Color3.fromRGB(20, 20, 20)
+ScanBtn.Font = Enum.Font.GothamBold
+ScanBtn.Parent = MainFrame
+Instance.new("UICorner", ScanBtn).CornerRadius = UDim.new(0, 6)
+
+-- TUTUP
+local Close = Instance.new("TextButton")
+Close.Text = "X"; Close.Size = UDim2.new(0, 25, 0, 25); Close.Position = UDim2.new(1, -30, 0, 5)
+Close.BackgroundColor3 = Color3.fromRGB(200, 50, 50); Close.Parent = MainFrame
+Instance.new("UICorner", Close).CornerRadius = UDim.new(0, 6)
+Close.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+-- ==============================================================================
+-- LOGIKA DETEKSI (THE BRAIN)
+-- ==============================================================================
+
+local function ScanInventory()
+    -- Reset Label
+    for i = 1, 4 do
+        SlotsLabels[i].Text = "Slot " .. i .. ": [ Kosong ]"
+        SlotsLabels[i].TextColor3 = Color3.fromRGB(150, 150, 150)
+    end
+    
+    local FoundItems = {}
+    
+    -- Fungsi Helper untuk Cek Tool
+    local function CheckTool(tool)
+        if not tool:IsA("Tool") then return end
+        
+        -- Cek Tipe Senjata berdasarkan ToolTip
+        local Type = tool.ToolTip -- Melee, Blox Fruit, Sword, Gun
+        local Name = tool.Name
+        
+        if Type == "Melee" then
+            SlotsLabels[1].Text = "Slot 1 (Melee): " .. Name
+            SlotsLabels[1].TextColor3 = Color3.fromRGB(255, 150, 0) -- Orange
+            FoundItems[1] = Name
+            
+        elseif Type == "Blox Fruit" then
+            SlotsLabels[2].Text = "Slot 2 (Fruit): " .. Name
+            SlotsLabels[2].TextColor3 = Color3.fromRGB(200, 50, 255) -- Ungu
+            FoundItems[2] = Name
+            
+        elseif Type == "Sword" then
+            SlotsLabels[3].Text = "Slot 3 (Sword): " .. Name
+            SlotsLabels[3].TextColor3 = Color3.fromRGB(0, 150, 255) -- Biru
+            FoundItems[3] = Name
+            
+        elseif Type == "Gun" then
+            SlotsLabels[4].Text = "Slot 4 (Gun): " .. Name
+            SlotsLabels[4].TextColor3 = Color3.fromRGB(255, 255, 100) -- Kuning
+            FoundItems[4] = Name
+        end
+    end
+    
+    -- 1. Scan apa yang sedang DIPEGANG (Character)
+    for _, t in pairs(LP.Character:GetChildren()) do
+        CheckTool(t)
+    end
+    
+    -- 2. Scan apa yang ada di TAS (Backpack)
+    for _, t in pairs(LP.Backpack:GetChildren()) do
+        CheckTool(t)
+    end
+    
+    return FoundItems
+end
+
+-- Hubungkan Tombol
+ScanBtn.MouseButton1Click:Connect(ScanInventory)
+
+-- Auto Scan saat script dijalankan
+ScanInventory()
