@@ -1,121 +1,101 @@
 --[[
-    VELOX MACRO CONTROLLER (AUTO SLOT & SKILL)
-    Fitur:
-    - Slot 1-4: Auto Detect & Equip (Melee/Fruit/Sword/Gun)
-    - Skill Z-F: Auto Fire skill senjata yang sedang aktif.
-    - Anti-Freeze: Menggunakan Signal Fire, bukan sentuh layar.
+    VELOX INSTANT REMOTE
+    Logika:
+    1. Cari Tool berdasarkan Tipe (Melee/Fruit/Sword/Gun).
+    2. Langsung Fire RemoteEvent:FireServer(true).
 ]]
 
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CoreGui = game:GetService("CoreGui")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 local LP = Players.LocalPlayer
 local PlayerGui = LP:WaitForChild("PlayerGui")
 
--- 1. BERSIHKAN UI LAMA
-if CoreGui:FindFirstChild("VeloxMacro") then
-    CoreGui.VeloxMacro:Destroy()
+if CoreGui:FindFirstChild("VeloxInstant") then
+    CoreGui.VeloxInstant:Destroy()
 end
 
--- 2. GUI SETUP
+-- GUI SETUP
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "VeloxMacro"
+ScreenGui.Name = "VeloxInstant"
 ScreenGui.Parent = CoreGui
 ScreenGui.ResetOnSpawn = false
 
--- FRAME UTAMA (Kecil & Rapi)
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 300, 0, 150)
-MainFrame.Position = UDim2.new(0.5, -150, 0.25, 0) -- Posisi agak ke atas
+MainFrame.Size = UDim2.new(0, 300, 0, 160)
+MainFrame.Position = UDim2.new(0.5, -150, 0.25, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
-
--- Hiasan UI
-local UC = Instance.new("UICorner"); UC.CornerRadius=UDim.new(0,10); UC.Parent=MainFrame
-local US = Instance.new("UIStroke"); US.Color=Color3.fromRGB(255, 180, 0); US.Thickness=2; US.Parent=MainFrame
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
+Instance.new("UIStroke", MainFrame).Color = Color3.fromRGB(255, 0, 0) -- Merah (Mode Tempur)
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 25)
-Title.Text = "VELOX MACRO"
-Title.TextColor3 = Color3.fromRGB(255, 180, 0)
+Title.Text = "VELOX: REMOTE FIRE"
+Title.TextColor3 = Color3.fromRGB(255, 50, 50)
 Title.Font = Enum.Font.GothamBlack
 Title.BackgroundTransparency = 1
 Title.Parent = MainFrame
 
--- WADAH TOMBOL SLOT (1-4)
-local SlotContainer = Instance.new("Frame")
-SlotContainer.Size = UDim2.new(0.9, 0, 0.35, 0)
-SlotContainer.Position = UDim2.new(0.05, 0, 0.2, 0)
-SlotContainer.BackgroundTransparency = 1
-SlotContainer.Parent = MainFrame
-local GridSlot = Instance.new("UIGridLayout")
-GridSlot.CellSize = UDim2.new(0.22, 0, 1, 0); GridSlot.Parent=SlotContainer
-
--- WADAH TOMBOL SKILL (Z-F)
-local SkillContainer = Instance.new("Frame")
-SkillContainer.Size = UDim2.new(0.9, 0, 0.35, 0)
-SkillContainer.Position = UDim2.new(0.05, 0, 0.6, 0)
-SkillContainer.BackgroundTransparency = 1
-SkillContainer.Parent = MainFrame
-local GridSkill = Instance.new("UIGridLayout")
-GridSkill.CellSize = UDim2.new(0.18, 0, 1, 0); GridSkill.Parent=SkillContainer
+-- WADAH TOMBOL
+local SlotC = Instance.new("Frame"); SlotC.Size=UDim2.new(0.9,0,0.35,0); SlotC.Position=UDim2.new(0.05,0,0.2,0); SlotC.BackgroundTransparency=1; SlotC.Parent=MainFrame
+local SkillC = Instance.new("Frame"); SkillC.Size=UDim2.new(0.9,0,0.35,0); SkillC.Position=UDim2.new(0.05,0,0.6,0); SkillC.BackgroundTransparency=1; SkillC.Parent=MainFrame
+local G1 = Instance.new("UIGridLayout"); G1.CellSize=UDim2.new(0.22,0,1,0); G1.Parent=SlotC
+local G2 = Instance.new("UIGridLayout"); G2.CellSize=UDim2.new(0.18,0,1,0); G2.Parent=SkillC
 
 -- ==============================================================================
--- [LOGIKA INTI]
+-- [LOGIKA INTI - REMOTE FIRE]
 -- ==============================================================================
 
--- 1. FUNGSI EQUIP OTOMATIS BERDASARKAN TIPE
-local function EquipByType(targetType)
-    local foundName = nil
+local function FireRemoteWeapon(targetType)
+    -- Kita cari tool di Character (Tubuh) DAN Backpack (Slot)
+    -- Kita gabungkan pencarian agar script PASTI menemukan senjatanya dimanapun dia berada
+    local foundTool = nil
     
-    -- Cek Senjata yang sedang dipegang (Character)
+    -- Cek Character
     for _, t in pairs(LP.Character:GetChildren()) do
-        if t:IsA("Tool") and t.ToolTip == targetType then foundName = t.Name break end
+        if t:IsA("Tool") and t.ToolTip == targetType then foundName = t; foundTool = t; break end
     end
     
-    -- Cek Tas (Backpack) jika belum ketemu
-    if not foundName then
+    -- Cek Backpack (Jika tidak ketemu di Character)
+    if not foundTool then
         for _, t in pairs(LP.Backpack:GetChildren()) do
-            if t:IsA("Tool") and t.ToolTip == targetType then foundName = t.Name break end
+            if t:IsA("Tool") and t.ToolTip == targetType then foundTool = t; break end
         end
     end
-    
-    -- Eksekusi Equip
-    if foundName then
-        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("LoadItem", foundName)
-        return true -- Berhasil
-    else
-        return false -- Gagal (Tidak punya item)
+
+    -- EKSEKUSI REMOTE
+    if foundTool then
+        -- Agar RemoteEvent BISA ditembak, tool harus aktif di Humanoid
+        LP.Character.Humanoid:EquipTool(foundTool) 
+        
+        -- Cari RemoteEvent di dalam tool tersebut
+        local RE = foundTool:FindFirstChild("RemoteEvent")
+        if RE then
+            local args = { [1] = true }
+            RE:FireServer(unpack(args))
+            return true
+        end
     end
+    return false
 end
 
--- 2. FUNGSI FIRE TOMBOL (SIGNAL)
-local function FireSignal(btn)
-    if not btn or not btn.Visible then return end
-    
-    -- Coba nyalakan semua sinyal tombol (Brute Force aman)
-    local cons = getconnections(btn.Activated)
-    if #cons == 0 then cons = getconnections(btn.MouseButton1Click) end
-    if #cons == 0 then cons = getconnections(btn.InputBegan) end
-    
-    for _, c in pairs(cons) do c:Fire() end
-end
+-- ==============================================================================
+-- [LOGIKA SKILL - UI FIRE]
+-- ==============================================================================
 
--- 3. FUNGSI SKILL PINTAR
-local function SmartSkill(key)
+local function FireSkill(key)
     local Main = PlayerGui:FindFirstChild("Main")
     local Skills = Main and Main:FindFirstChild("Skills")
-    
     if Skills then
         for _, w in pairs(Skills:GetChildren()) do
-            -- Cari folder senjata yang sedang VISIBLE (Aktif)
-            -- Logikanya: Kalau kamu tekan tombol 1, folder Melee jadi visible.
             if w:IsA("Frame") and w.Visible then
-                local btn = w:FindFirstChild(key) and w[key]:FindFirstChild("Mobile")
-                if btn then
-                    FireSignal(btn)
+                local b = w:FindFirstChild(key) and w[key]:FindFirstChild("Mobile")
+                if b then
+                    for _, c in pairs(getconnections(b.Activated)) do c:Fire() end
+                    for _, c in pairs(getconnections(b.MouseButton1Click)) do c:Fire() end
                     return
                 end
             end
@@ -124,56 +104,39 @@ local function SmartSkill(key)
 end
 
 -- ==============================================================================
--- [PEMBUATAN TOMBOL]
+-- [UI BUILDER]
 -- ==============================================================================
 
-local function CreateBtn(text, color, parent, callback)
+local function MakeBtn(text, color, parent, cb)
     local b = Instance.new("TextButton")
     b.Text = text
-    b.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    b.BackgroundColor3 = Color3.fromRGB(40,40,50)
     b.TextColor3 = color
     b.Font = Enum.Font.GothamBold
-    b.TextSize = 16
     b.Parent = parent
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
-    
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0,6)
     b.MouseButton1Click:Connect(function()
-        local success = callback()
-        
-        -- Efek Visual Klik
-        local oldColor = b.BackgroundColor3
-        if success == false then
-            b.BackgroundColor3 = Color3.fromRGB(150, 50, 50) -- Merah (Gagal)
-        else
-            b.BackgroundColor3 = color -- Warna Tombol (Sukses)
-            b.TextColor3 = Color3.fromRGB(20, 20, 20)
-        end
-        
-        task.delay(0.1, function()
-            b.BackgroundColor3 = oldColor
-            b.TextColor3 = color
-        end)
+        cb()
+        b.BackgroundColor3 = color; b.TextColor3 = Color3.fromRGB(20,20,20)
+        task.delay(0.1, function() b.BackgroundColor3 = Color3.fromRGB(40,40,50); b.TextColor3 = color end)
     end)
 end
 
--- TOMBOL SLOT 1-4
--- Warna: Kuning Emas
-CreateBtn("1", Color3.fromRGB(255, 200, 0), SlotContainer, function() return EquipByType("Melee") end)
-CreateBtn("2", Color3.fromRGB(255, 200, 0), SlotContainer, function() return EquipByType("Blox Fruit") end)
-CreateBtn("3", Color3.fromRGB(255, 200, 0), SlotContainer, function() return EquipByType("Sword") end)
-CreateBtn("4", Color3.fromRGB(255, 200, 0), SlotContainer, function() return EquipByType("Gun") end)
+-- TOMBOL SLOT 1-4 (Kuning)
+MakeBtn("1", Color3.fromRGB(255, 200, 0), SlotC, function() FireRemoteWeapon("Melee") end)
+MakeBtn("2", Color3.fromRGB(255, 200, 0), SlotC, function() FireRemoteWeapon("Blox Fruit") end)
+MakeBtn("3", Color3.fromRGB(255, 200, 0), SlotC, function() FireRemoteWeapon("Sword") end)
+MakeBtn("4", Color3.fromRGB(255, 200, 0), SlotC, function() FireRemoteWeapon("Gun") end)
 
--- TOMBOL SKILL Z-F
--- Warna: Biru Cyan
-CreateBtn("Z", Color3.fromRGB(0, 200, 255), SkillContainer, function() SmartSkill("Z") end)
-CreateBtn("X", Color3.fromRGB(0, 200, 255), SkillContainer, function() SmartSkill("X") end)
-CreateBtn("C", Color3.fromRGB(0, 200, 255), SkillContainer, function() SmartSkill("C") end)
-CreateBtn("V", Color3.fromRGB(0, 200, 255), SkillContainer, function() SmartSkill("V") end)
-CreateBtn("F", Color3.fromRGB(0, 200, 255), SkillContainer, function() SmartSkill("F") end)
+-- TOMBOL SKILL Z-F (Biru)
+local k = {"Z","X","C","V","F"}
+for _, key in ipairs(k) do
+    MakeBtn(key, Color3.fromRGB(0, 200, 255), SkillC, function() FireSkill(key) end)
+end
 
--- CLOSE BUTTON
+-- TUTUP
 local Close = Instance.new("TextButton")
 Close.Text = "X"; Close.Size = UDim2.new(0, 25, 0, 25); Close.Position = UDim2.new(1, -30, 0, 0)
 Close.BackgroundTransparency = 1; Close.TextColor3 = Color3.fromRGB(255, 50, 50)
-Close.Font = Enum.Font.GothamBlack; Close.Parent = MainFrame
+Close.Parent = MainFrame
 Close.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
