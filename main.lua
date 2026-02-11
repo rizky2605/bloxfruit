@@ -37,7 +37,6 @@ local isRunning = false
 local IsLayoutLocked = false 
 local GlobalTransparency = 0 
 local IsJoystickEnabled = false 
--- [DIHAPUS] IsMovementPaused tidak lagi diperlukan
 
 local Combos = {} 
 local CurrentComboIndex = 0 
@@ -774,35 +773,28 @@ local function toggleVirtualKey(keyName, slotIdx, customName)
             if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
                 
                 -- KASUS 1: TOMBOL SENJATA (1, 2, 3, 4)
-                -- PERBAIKAN: Tidak ada perubahan warna, hanya kirim sinyal
                 if isWeaponKey then
                     VIM:SendKeyEvent(true, kCode, false, game)
                     task.wait(0.05)
                     VIM:SendKeyEvent(false, kCode, false, game)
                     
                 -- KASUS 2: TOMBOL SKILL (Z, X, C...) - MODE INSTANT
-                -- PERBAIKAN: Tidak ada perubahan warna, hanya kirim sinyal hold
                 elseif SkillMode == "INSTANT" then
                     if vData.Slot then equipWeapon(vData.Slot) end
                     VIM:SendKeyEvent(true, kCode, false, game)
-                    -- Visual dihapus sesuai permintaan
                     
                 -- KASUS 3: TOMBOL SKILL - MODE SMART TAP
-                -- PERBAIKAN: Tetap berubah warna (Hijau) untuk menandakan READY
                 elseif SkillMode == "SMART" then
                     if CurrentSmartKeyData and CurrentSmartKeyData.ID ~= id then
                         local old = ActiveVirtualKeys[CurrentSmartKeyData.ID]
-                        -- Reset tombol lama ke hitam
                         if old then old.Button.BackgroundColor3=Color3.fromRGB(0,0,0); old.Button.TextColor3=Theme.Accent end
                     end
                     
                     if CurrentSmartKeyData and CurrentSmartKeyData.ID == id then
-                        -- Batal pilih (Unselect)
                         CurrentSmartKeyData = nil
                         btn.BackgroundColor3 = Color3.fromRGB(0,0,0)
                         btn.TextColor3 = Theme.Accent
                     else
-                        -- Pilih Skill (Select) -> JADI HIJAU
                         CurrentSmartKeyData = vData
                         btn.BackgroundColor3 = Theme.Green
                         btn.TextColor3 = Theme.Bg
@@ -815,11 +807,8 @@ local function toggleVirtualKey(keyName, slotIdx, customName)
         -- [EVENT SAAT JARI DIANGKAT DARI TOMBOL]
         btn.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-                
-                -- HANYA UNTUK SKILL DI MODE INSTANT (Lepas Key)
                 if not isWeaponKey and SkillMode == "INSTANT" then
                     VIM:SendKeyEvent(false, kCode, false, game)
-                    -- Tidak perlu mereset warna karena warna tidak berubah di awal
                 end
             end
         end)
@@ -847,7 +836,6 @@ CreateComboButtonFunc = function(idx, loadedSteps)
     
     MakeDraggable(btn, function() 
         if SkillMode == "INSTANT" then 
-            -- Joystick Pause Removed
             executeComboSequence(idx) 
         else 
             if SelectedComboID==idx then 
