@@ -1,12 +1,10 @@
 --[[
-    VELOX V135 (FIXED & OPTIMIZED)
+    VELOX V135 (FIXED & CUSTOMIZED)
     
-    [ CHANGELOG V135 ]
-    1. SAVE/LOAD SYSTEM: FIXED. Now fully functional (Combos, Layout, Keys).
-    2. CHAT CHECK: Skills won't fire while typing in chat.
-    3. JOYSTICK DEADZONE: Added 15% deadzone to prevent shaking.
-    4. REFACTOR: Cleaned up Combo Button creation for stability.
-    5. SAFETY: Enhanced character checks during combo execution.
+    [ PERBAIKAN USER ]
+    1. JOYSTICK PAUSE REMOVED: Tidak ada delay/freeze saat skill.
+    2. KEY BIND LOGIC: Pilihan key menyesuaikan tipe senjata (Sword hanya Z/X, dll).
+    3. UI FIX: Tulisan pada tombol Weapon Bind tidak lagi keluar kotak (Auto Scale).
 ]]
 
 -- ==============================================================================
@@ -213,9 +211,8 @@ end
 
 -- COMBAT LOGIC
 local function PauseJoystickForAim()
-    -- JOYSTICK PAUSE 0.3s
-    IsMovementPaused = true
-    task.delay(0.3, function() IsMovementPaused = false end)
+    -- [REMOVED] Joystick Pause System removed as requested
+    -- IsMovementPaused = false 
 end
 
 local function pressKey(k, isHold, holdDur)
@@ -751,6 +748,9 @@ local function toggleVirtualKey(keyName, slotIdx, customName)
         btn.TextColor3 = Theme.Accent
         btn.Font = Enum.Font.GothamBold
         btn.TextSize = 20
+        -- [FIX] ENABLE TEXT SCALED FOR LONG NAMES (e.g. "Melee Z")
+        btn.TextScaled = true 
+        btn.TextWrapped = true
         btn.Parent = ScreenGui
         btn.Selectable = false
         createCorner(btn, 12)
@@ -892,9 +892,37 @@ local VKeyAddBox = Instance.new("Frame"); VKeyAddBox.Size=UDim2.new(0.95,0,0,80)
 local TypeBtn = Instance.new("TextButton"); TypeBtn.Size=UDim2.new(0.45,0,0,30); TypeBtn.Position=UDim2.new(0.03,0,0.1,0); TypeBtn.BackgroundColor3=Theme.Element; TypeBtn.Text="Melee"; TypeBtn.TextColor3=Theme.Text; TypeBtn.Parent=VKeyAddBox; createCorner(TypeBtn,6)
 local KeyBtn = Instance.new("TextButton"); KeyBtn.Size=UDim2.new(0.45,0,0,30); KeyBtn.Position=UDim2.new(0.52,0,0.1,0); KeyBtn.BackgroundColor3=Theme.Element; KeyBtn.Text="Z"; KeyBtn.TextColor3=Theme.Text; KeyBtn.Parent=VKeyAddBox; createCorner(KeyBtn,6)
 local AddVKeyBtn = Instance.new("TextButton"); AddVKeyBtn.Size=UDim2.new(0.94,0,0,30); AddVKeyBtn.Position=UDim2.new(0.03,0,0.55,0); AddVKeyBtn.BackgroundColor3=Theme.Green; AddVKeyBtn.Text="ADD BOUND KEY"; AddVKeyBtn.TextColor3=Theme.Bg; AddVKeyBtn.Font=Enum.Font.GothamBold; AddVKeyBtn.Parent=VKeyAddBox; createCorner(AddVKeyBtn,6)
+
 local selW, selK = "Melee", "Z"
-TypeBtn.MouseButton1Click:Connect(function() local tList={"Melee", "Fruit", "Sword", "Gun"}; local idx=table.find(tList, selW) or 0; selW=tList[(idx%#tList)+1]; TypeBtn.Text=selW end)
-KeyBtn.MouseButton1Click:Connect(function() local kList={"Z", "X", "C", "V", "F"}; local idx=table.find(kList, selK) or 0; selK=kList[(idx%#kList)+1]; KeyBtn.Text=selK end)
+
+TypeBtn.MouseButton1Click:Connect(function() 
+    local tList={"Melee", "Fruit", "Sword", "Gun"}
+    local idx=table.find(tList, selW) or 0
+    selW=tList[(idx%#tList)+1]
+    TypeBtn.Text=selW 
+    
+    -- Auto-Reset Key to Valid One for new Weapon
+    local validKeys = {}
+    for _, w in ipairs(WeaponData) do if w.name == selW then validKeys = w.keys break end end
+    if not table.find(validKeys, selK) then selK = validKeys[1] end
+    KeyBtn.Text = selK
+end)
+
+-- [FIX] DYNAMIC KEY SELECTOR BASED ON WEAPON
+KeyBtn.MouseButton1Click:Connect(function() 
+    local kList = {}
+    -- Find keys for selected weapon
+    for _, w in ipairs(WeaponData) do 
+        if w.name == selW then kList = w.keys break end 
+    end
+    -- Fallback
+    if #kList == 0 then kList = {"Z", "X"} end
+    
+    local idx=table.find(kList, selK) or 0
+    selK=kList[(idx%#kList)+1]
+    KeyBtn.Text=selK 
+end)
+
 AddVKeyBtn.MouseButton1Click:Connect(function() local slot=1; for i,v in ipairs(WeaponData) do if v.name==selW then slot=i break end end; local id=selW.." "..selK; toggleVirtualKey(selK, slot, id) end)
 
 -- RESIZER & VISIBILITY BUTTON
